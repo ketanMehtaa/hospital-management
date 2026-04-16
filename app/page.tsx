@@ -11,12 +11,12 @@ export default function Home() {
             <h1 className="text-4xl font-semibold text-zinc-950">Hospital management dashboard</h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600">
               A starting point for patient registration, billing, and inventory. Use the Patients page to add and manage
-              patient records.
+              patient records, and the Billing page to create invoices and review recent bills.
             </p>
           </div>
         </div>
 
-        <div className="grid w-full gap-4 sm:grid-cols-2">
+        <div className="grid w-full gap-4 sm:grid-cols-3">
           <Link
             href="/patients"
             className="rounded-2xl bg-zinc-950 px-6 py-5 text-center text-sm font-semibold text-white transition hover:bg-zinc-800"
@@ -28,6 +28,12 @@ export default function Home() {
             className="rounded-2xl border border-zinc-200 px-6 py-5 text-center text-sm font-semibold text-zinc-950 transition hover:border-zinc-400"
           >
             Open Medicines inventory
+          </Link>
+          <Link
+            href="/bills"
+            className="rounded-2xl border border-zinc-200 px-6 py-5 text-center text-sm font-semibold text-zinc-950 transition hover:border-zinc-400"
+          >
+            Open Billing dashboard
           </Link>
         </div>
       </main>
