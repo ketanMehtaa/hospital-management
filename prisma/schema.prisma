@@ -1,0 +1,156 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================
+// ENUMS (full words)
+// ========================
+
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum PatientType {
+  fresh
+  followup
+}
+
+enum MedicineCategory {
+  Antibiotic
+  Antihistamine
+  Decongestant
+  Steroid
+  Analgesic
+  Antifungal
+  EarDrop        // displayed as "Ear Drop"
+  NasalSpray     // displayed as "Nasal Spray"
+  ThroatSpray    // displayed as "Throat Spray"
+  Other
+}
+
+enum MedicineUnit {
+  Strip
+  Bottle
+  Tube
+  Vial
+  Sachet
+  Tablet
+  Capsule
+}
+
+enum BillCategory {
+  OpdConsultation
+  Medicine
+  Endoscopy
+  Procedure
+  HearingTest
+  Radiology
+  Pathology
+}
+
+// ========================
+// MODELS
+// ========================
+
+// Patient – core information
+model Patient {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(255)
+  age         Int?
+  gender      Gender?
+  phone       String?     @db.VarChar(20)
+  address     String?     @db.Text
+  diagnosis   String?     @db.Text       // chief complaint
+  notes       String?     @db.Text
+  visitDate   DateTime    @map("visit_date") @db.Date
+  visitTime   String?     @map("visit_time") @db.VarChar(10)
+  patientType PatientType @default(fresh) @map("patient_type")
+
+  bills       Bill[]
+
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([phone])
+  @@map("patients")
+}
+
+// Medicine inventory
+model Medicine {
+  id          Int             @id @default(autoincrement())
+  barcode     String?         @unique @db.VarChar(100)
+  name        String          @db.VarChar(255)
+  category    MedicineCategory @default(Other)
+  unit        MedicineUnit     @default(Strip)
+  buyingPrice Float?          @map("buying_price") @default(0)
+  sellingPrice Float          @map("selling_price")
+  stock       Float           @default(0)
+  minStock    Float           @map("min_stock") @default(10)
+  expiryDate  DateTime?       @map("expiry_date") @db.Date
+  batchNumber String?         @map("batch_number") @db.VarChar(100)
+
+  billItems   BillItem[]
+
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([barcode])
+  @@map("medicines")
+}
+
+// Bill header – one bill per patient visit (or walk-in)
+model Bill {
+  id          Int      @id @default(autoincrement())
+  billNumber  String   @unique @map("bill_number") @db.VarChar(50)
+  patientId   Int?     @map("patient_id")
+  patientName String   @map("patient_name") @db.VarChar(255) // denormalised for speed
+  phone       String?  @db.VarChar(20)
+  billDate    DateTime @map("bill_date") @db.Date
+  billTime    String?  @map("bill_time") @db.VarChar(10)
+  discount    Float    @default(0)
+  totalAmount Float    @map("total_amount") @default(0)
+
+  patient     Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  items       BillItem[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([billDate])
+  @@index([billNumber])
+  @@map("bills")
+}
+
+// Bill line item – unified structure for any service or product
+model BillItem {
+  id          Int          @id @default(autoincrement())
+  billId      Int          @map("bill_id")
+  category    BillCategory // OpdConsultation, Medicine, Endoscopy, etc.
+  description String       @db.VarChar(255) // e.g., "First Visit Consultation", "Paracetamol"
+  quantity    Float        @default(1)
+  unitPrice   Float        @map("unit_price") // price per unit
+  amount      Float        // quantity * unitPrice
+
+  // Optional link to medicine (only when category = Medicine)
+  medicineId  Int?         @map("medicine_id")
+  medicine    Medicine?    @relation(fields: [medicineId], references: [id], onDelete: SetNull)
+
+  bill        Bill         @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@index([medicineId])
+  @@map("bill_items")
+}
