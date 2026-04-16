@@ -111,34 +111,32 @@ export default function PatientManager() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">
-              Patients
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">Patient registry</h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500">Patients</p>
+            <h2 className="mt-2 text-2xl font-semibold text-zinc-950">Patient registry</h2>
           </div>
-          <div className="rounded-2xl bg-zinc-100 px-4 py-2 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          <div className="rounded-2xl bg-zinc-100 px-4 py-2 text-sm text-zinc-700">
             {patientCount} saved patient{patientCount === 1 ? '' : 's'}
           </div>
         </div>
 
         <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Name*
             <input
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.name}
               onChange={(event) => handleChange('name', event.target.value)}
               required
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Age
             <input
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               type="number"
               min="0"
               value={form.age}
@@ -146,10 +144,10 @@ export default function PatientManager() {
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Gender
             <select
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.gender}
               onChange={(event) => handleChange('gender', event.target.value)}
             >
@@ -160,19 +158,19 @@ export default function PatientManager() {
             </select>
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Phone
             <input
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.phone}
               onChange={(event) => handleChange('phone', event.target.value)}
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Visit date*
             <input
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               type="date"
               value={form.visitDate}
               onChange={(event) => handleChange('visitDate', event.target.value)}
@@ -180,20 +178,20 @@ export default function PatientManager() {
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Visit time
             <input
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.visitTime}
               onChange={(event) => handleChange('visitTime', event.target.value)}
               placeholder="09:30 AM"
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Patient type
             <select
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.patientType}
               onChange={(event) => handleChange('patientType', event.target.value)}
             >
@@ -202,29 +200,29 @@ export default function PatientManager() {
             </select>
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200 md:col-span-2">
+          <label className="space-y-2 text-sm text-zinc-700 md:col-span-2">
             Address
             <textarea
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               rows={3}
               value={form.address}
               onChange={(event) => handleChange('address', event.target.value)}
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Diagnosis
             <input
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.diagnosis}
               onChange={(event) => handleChange('diagnosis', event.target.value)}
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 dark:text-zinc-200">
+          <label className="space-y-2 text-sm text-zinc-700">
             Notes
             <textarea
-              className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-slate-400 dark:focus:ring-slate-800"
+              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               rows={3}
               value={form.notes}
               onChange={(event) => handleChange('notes', event.target.value)}
@@ -232,12 +230,10 @@ export default function PatientManager() {
           </label>
 
           <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-zinc-600 dark:text-zinc-400">
-              Add new patients and keep your visit records in one place.
-            </div>
+            <div className="text-sm text-zinc-600">Add new patients and keep your visit records in one place.</div>
             <button
               type="submit"
-              className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-100"
+              className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               {loading ? 'Saving...' : 'Save patient'}
@@ -245,31 +241,25 @@ export default function PatientManager() {
           </div>
         </form>
 
-        {error ? (
-          <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-950/20 dark:text-rose-300">
-            {error}
-          </p>
-        ) : null}
+        {error ? <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
         {success ? (
-          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300">
-            {success}
-          </p>
+          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>
         ) : null}
       </section>
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-        <h3 className="mb-4 text-lg font-semibold text-zinc-950 dark:text-zinc-50">Recent patients</h3>
+      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20">
+        <h3 className="mb-4 text-lg font-semibold text-zinc-950">Recent patients</h3>
         {loading && patients.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+          <div className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">
             Loading patients...
           </div>
         ) : patients.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+          <div className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">
             No patients yet. Add one using the form above.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-zinc-200 text-left text-sm text-zinc-700 dark:divide-zinc-800 dark:text-zinc-200">
+            <table className="min-w-full divide-y divide-zinc-200 text-left text-sm text-zinc-700">
               <thead>
                 <tr>
                   <th className="px-4 py-3 font-medium">Name</th>
@@ -279,15 +269,13 @@ export default function PatientManager() {
                   <th className="px-4 py-3 font-medium">Diagnosis</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody className="divide-y divide-zinc-200">
                 {patients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/70">
-                    <td className="px-4 py-3 font-semibold text-zinc-950 dark:text-zinc-50">{patient.name}</td>
+                  <tr key={patient.id} className="hover:bg-zinc-50">
+                    <td className="px-4 py-3 font-semibold text-zinc-950">{patient.name}</td>
                     <td className="px-4 py-3">
                       <div>{new Date(patient.visitDate).toLocaleDateString()}</div>
-                      {patient.visitTime ? (
-                        <div className="text-xs text-zinc-500 dark:text-zinc-400">{patient.visitTime}</div>
-                      ) : null}
+                      {patient.visitTime ? <div className="text-xs text-zinc-500">{patient.visitTime}</div> : null}
                     </td>
                     <td className="px-4 py-3">{patient.patientType}</td>
                     <td className="px-4 py-3">{patient.phone || '—'}</td>
