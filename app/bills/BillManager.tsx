@@ -324,13 +324,17 @@ export default function BillManager() {
       doc.text(`Phone: ${bill.phone || 'N/A'}`, 14, 57);
 
       const tableColumn = ["Description", "Category", "Qty", "Unit Price", "Amount"];
-      const tableRows = bill.items.map(item => [
-        item.description,
-        item.category,
-        item.quantity.toString(),
-        `Rs. ${item.unitPrice.toFixed(2)}`,
-        `Rs. ${(item.quantity * item.unitPrice).toFixed(2)}`
-      ]);
+      const tableRows = bill.items.map(item => {
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.unitPrice) || 0;
+        return [
+          item.description,
+          item.category,
+          qty.toString(),
+          `Rs. ${price.toFixed(2)}`,
+          `Rs. ${(qty * price).toFixed(2)}`
+        ];
+      });
 
       autoTable(doc, {
         startY: 65,
