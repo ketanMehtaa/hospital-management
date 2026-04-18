@@ -124,6 +124,10 @@ model Bill {
   discount    Decimal  @default(0) @db.Decimal(10,2)
   totalAmount Decimal  @map("total_amount") @db.Decimal(10,2)
 
+  // ✅ payment split
+  paidCash    Decimal  @default(0) @map("paid_cash") @db.Decimal(10,2)
+  paidOnline  Decimal  @default(0) @map("paid_online") @db.Decimal(10,2)
+
   patient Patient?  @relation(fields: [patientId], references: [id], onDelete: SetNull)
   items   BillItem[]
 

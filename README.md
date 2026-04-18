@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hospital Management System
 
-## Getting Started
+A Next.js hospital management app for patients, medicines, and billing.
 
-First, run the development server:
+## Tech Stack
 
+- **Framework** — Next.js 16 (App Router)
+- **Database** — PostgreSQL (Docker or Neon)
+- **ORM** — Prisma 7
+- **Styling** — Tailwind CSS v4
+
+---
+
+## Quick Start (Docker — offline / local)
+
+### 1. Copy environment file
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> For Docker the default values in `env.example` work out of the box.  
+> Change `DASHBOARD_PIN` to any 4-digit number you want.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Start the database
+```bash
+docker compose up -d
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Run migrations
+```bash
+npx prisma migrate dev --name init
+```
 
-## Learn More
+### 4. Start the dev server
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Rebuild Docker app image (after code changes)
+```bash
+docker compose up -d --build
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Database Commands
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | Description |
+|---|---|
+| `npx prisma migrate dev --name <name>` | Create & apply a new migration |
+| `npx prisma migrate deploy` | Apply pending migrations (production) |
+| `npx prisma studio` | Open visual DB browser at port 5555 |
+| `pnpm db:seed` | Seed with 1 000 patients + 60 medicines + bills |
+
+---
+
+## Seed the Database
+
+To populate the database with realistic test data (1 000 patients, 60 medicines, ~1 200 bills):
+
+```bash
+pnpm db:seed
+```
+
+> **Warning:** The seed script **clears all existing data** before inserting.
+>
+> What gets seeded:
+> - 🏥 **60 medicines** across all categories (Antibiotic, Antihistamine, Steroid, etc.) with realistic buying/selling prices and stock
+> - 👤 **1 000 patients** with Indian names, diagnoses, phone numbers, and visit dates spread over the last 90 days
+> - 🧾 **~1 200–1 500 bills** (1–2 per patient) each containing a consultation, optional services (Endoscopy, Radiology, etc.), and 1–4 medicine items — with cash/online payment split
+
+---
+
+## Environment Variables
+
+| Variable | Description | Example |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/hospital?schema=public` |
+| `DASHBOARD_PIN` | 4-digit PIN to lock the analytics dashboard | `0000` |
+
+---
+
+## Project Structure
+
+```
+app/
+  api/           → REST API routes (patients, medicines, bills, dashboard)
+  bills/         → Bill management UI
+  dashboard/     → PIN-locked analytics dashboard
+  medicines/     → Medicine inventory UI
+  patients/      → Patient registry UI
+prisma/
+  schema.prisma  → Database schema
+  migrations/    → Migration history
+  seed.ts        → Test data seeder
+```
