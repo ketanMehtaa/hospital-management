@@ -1,0 +1,9 @@
+.git
+.gitignore
+.next
+.vercel
+node_modules
+*.log
+.env*
+app/generated/prisma
+tsconfig.tsbuildinfo
