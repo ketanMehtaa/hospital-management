@@ -3,109 +3,101 @@ import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL must be defined in the environment.');
-}
+if (!databaseUrl) throw new Error('DATABASE_URL must be defined in the environment.');
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),
 });
 
-type MedicineRecord = Awaited<ReturnType<typeof prisma.medicine.findMany>>[number];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const toNumberInput = (value: unknown) => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : undefined;
+const toNum = (v: unknown): number | undefined => {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim()) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
   }
-
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
   return undefined;
 };
 
-const toMedicinePayload = (medicine: MedicineRecord) => ({
-  ...medicine,
-  buyingPrice: medicine.buyingPrice === null ? null : Number(medicine.buyingPrice),
-  sellingPrice: Number(medicine.sellingPrice),
-  stock: Number(medicine.stock),
-  minStock: Number(medicine.minStock),
+type MedRow = Awaited<ReturnType<typeof prisma.medicine.findMany>>[number] & {
+  batches: { quantity: unknown }[];
+};
+
+const toPayload = (m: MedRow) => ({
+  id:           m.id,
+  barcode:      m.barcode,
+  name:         m.name,
+  category:     m.category,
+  unit:         m.unit,
+  buyingPrice:  m.buyingPrice  === null ? null : Number(m.buyingPrice),
+  sellingPrice: Number(m.sellingPrice),
+  minStock:     Number(m.minStock),
+  totalStock:   m.batches.reduce((s, b) => s + Number(b.quantity), 0),
+  batches:      (m as any).batches.map((b: any) => ({
+    id:            b.id,
+    batchNumber:   b.batchNumber,
+    expiryDate:    b.expiryDate,
+    quantity:      Number(b.quantity),
+    purchasePrice: b.purchasePrice === null ? null : Number(b.purchasePrice),
+    createdAt:     b.createdAt,
+  })),
+  createdAt:    m.createdAt,
+  deletedAt:    m.deletedAt,
 });
+
+// ─── GET — list all medicines with aggregated stock ───────────────────────────
 
 export async function GET() {
   const medicines = await prisma.medicine.findMany({
     where: { deletedAt: null },
-    orderBy: [{ stock: 'asc' }, { name: 'asc' }],
+    include: {
+      batches: {
+        where: { quantity: { gt: 0 } },
+        orderBy: { expiryDate: 'asc' },
+      },
+    },
+    orderBy: { name: 'asc' },
   });
 
-  return NextResponse.json(medicines.map(toMedicinePayload));
+  // Sort by totalStock ascending (low stock first) after aggregation
+  const payloads = medicines.map(toPayload);
+  payloads.sort((a, b) => a.totalStock - b.totalStock);
+
+  return NextResponse.json(payloads);
 }
 
+// ─── POST — create a new medicine (does NOT take stock; use restock to add batches) ──
+
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { barcode, name, category, unit, buyingPrice, sellingPrice, stock, minStock, expiryDate, batchNumber } =
-    body as {
-      barcode?: string;
-      name?: string;
-      category?: string;
-      unit?: string;
-      buyingPrice?: number | string;
-      sellingPrice?: number | string;
-      stock?: number | string;
-      minStock?: number | string;
-      expiryDate?: string;
-      batchNumber?: string;
-    };
+  const body = await request.json() as Record<string, unknown>;
+  const { barcode, name, category, unit, buyingPrice, sellingPrice, minStock } = body;
 
-  const normalizedName = name?.trim();
-  const parsedBuyingPrice = toNumberInput(buyingPrice);
-  const parsedSellingPrice = toNumberInput(sellingPrice);
-  const parsedStock = toNumberInput(stock);
-  const parsedMinStock = toNumberInput(minStock);
+  const normName = typeof name === 'string' ? name.trim() : '';
+  const parsedSelling = toNum(sellingPrice);
 
-  if (!normalizedName || parsedSellingPrice === undefined || parsedSellingPrice < 0) {
-    return NextResponse.json({ error: 'Name and valid selling price are required.' }, { status: 400 });
+  if (!normName || parsedSelling === undefined || parsedSelling < 0) {
+    return NextResponse.json(
+      { error: 'Name and valid selling price are required.' },
+      { status: 400 },
+    );
   }
 
-  if (parsedBuyingPrice !== undefined && parsedBuyingPrice < 0) {
-    return NextResponse.json({ error: 'Buying price cannot be negative.' }, { status: 400 });
-  }
-
-  if (parsedStock !== undefined && parsedStock < 0) {
-    return NextResponse.json({ error: 'Stock cannot be negative.' }, { status: 400 });
-  }
-
-  if (parsedMinStock !== undefined && parsedMinStock < 0) {
-    return NextResponse.json({ error: 'Minimum stock cannot be negative.' }, { status: 400 });
-  }
+  const parsedBuying  = toNum(buyingPrice);
+  const parsedMinStock = toNum(minStock);
 
   const medicine = await prisma.medicine.create({
     data: {
-      barcode: barcode?.trim() || undefined,
-      name: normalizedName,
-      category:
-        (category as
-          | 'Antibiotic'
-          | 'Antihistamine'
-          | 'Decongestant'
-          | 'Steroid'
-          | 'Analgesic'
-          | 'Antifungal'
-          | 'EarDrop'
-          | 'NasalSpray'
-          | 'ThroatSpray'
-          | 'Other') || 'Other',
-      unit: (unit as 'Strip' | 'Bottle' | 'Tube' | 'Vial' | 'Sachet' | 'Tablet' | 'Capsule') || 'Strip',
-      buyingPrice: parsedBuyingPrice ?? 0,
-      sellingPrice: parsedSellingPrice,
-      stock: parsedStock ?? 0,
-      minStock: parsedMinStock ?? 10,
-      expiryDate: expiryDate ? new Date(expiryDate) : undefined,
-      batchNumber: batchNumber?.trim() || undefined,
+      barcode:      typeof barcode === 'string' ? barcode.trim() || undefined : undefined,
+      name:         normName,
+      category:     (category as any) || 'Other',
+      unit:         (unit as any) || 'Strip',
+      buyingPrice:  parsedBuying,
+      sellingPrice: parsedSelling,
+      minStock:     parsedMinStock ?? 10,
     },
+    include: { batches: true },
   });
 
-  return NextResponse.json(toMedicinePayload(medicine), { status: 201 });
+  return NextResponse.json(toPayload(medicine as any), { status: 201 });
 }

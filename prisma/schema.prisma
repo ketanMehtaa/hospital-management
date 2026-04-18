@@ -82,27 +82,46 @@ model Medicine {
   category     MedicineCategory @default(Other)
   unit         MedicineUnit     @default(Strip)
 
-  // ❗ FIXED: Decimal instead of Float
-  buyingPrice  Decimal? @map("buying_price") @db.Decimal(10,2)
+  buyingPrice  Decimal? @map("buying_price") @db.Decimal(10,2)  // legacy / default cost
   sellingPrice Decimal  @map("selling_price") @db.Decimal(10,2)
 
-  // ❗ FIXED: Decimal stock
-  stock        Decimal  @default(0) @db.Decimal(10,2)
   minStock     Decimal  @map("min_stock") @default(10) @db.Decimal(10,2)
 
-  expiryDate   DateTime?        @map("expiry_date") @db.Date
-  batchNumber  String?          @map("batch_number") @db.VarChar(100)
+  // stock, expiryDate, batchNumber moved to MedicineBatch
+  batches   MedicineBatch[]
+  billItems BillItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime?
+
+  @@index([name])
+  @@index([barcode])
+  @@map("medicines")
+}
+
+/* ================= MEDICINE BATCH ================= */
+
+model MedicineBatch {
+  id            String   @id @default(uuid()) @db.Uuid
+
+  medicineId    String   @db.Uuid
+  medicine      Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+
+  batchNumber   String?  @map("batch_number") @db.VarChar(100)
+  expiryDate    DateTime? @map("expiry_date") @db.Date
+
+  quantity      Decimal  @db.Decimal(10,2)         // remaining units in this batch
+  purchasePrice Decimal? @map("purchase_price") @db.Decimal(10,2)
 
   billItems BillItem[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  deletedAt DateTime? // ✅ soft delete
 
-  @@index([name])
-  @@index([barcode])
+  @@index([medicineId])
   @@index([expiryDate])
-  @@map("medicines")
+  @@map("medicine_batches")
 }
 
 /* ================= BILL ================= */
@@ -157,9 +176,13 @@ model BillItem {
   medicineId String?   @map("medicine_id") @db.Uuid
   medicine   Medicine? @relation(fields: [medicineId], references: [id], onDelete: SetNull)
 
+  batchId String?        @map("batch_id") @db.Uuid
+  batch   MedicineBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
   bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
 
   @@index([billId])
   @@index([medicineId])
+  @@index([batchId])
   @@map("bill_items")
 }

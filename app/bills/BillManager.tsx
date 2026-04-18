@@ -32,7 +32,7 @@ type BillItemPayload = {
 };
 
 type PatientOption = { id: string; name: string; phone: string | null };
-type MedicineOption = { id: string; name: string; sellingPrice: number };
+type MedicineOption = { id: string; name: string; sellingPrice: number; totalStock: number };
 
 type BillItemForm = {
   category: string;
@@ -385,7 +385,6 @@ export default function BillManager() {
   };
 
   const isEditing = editingId !== null;
-  const totalBills = useMemo(() => bills.length, [bills]);
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -417,9 +416,6 @@ export default function BillManager() {
                 Cancel edit
               </button>
             )}
-            <div className="rounded-2xl bg-zinc-100 px-4 py-2 text-sm text-zinc-700">
-              {totalBills} bill{totalBills === 1 ? '' : 's'} total
-            </div>
           </div>
         </div>
 
@@ -598,8 +594,12 @@ export default function BillManager() {
                           >
                             <option value="">— Select medicine —</option>
                             {medicines.map((med) => (
-                              <option key={med.id} value={med.id}>
-                                {med.name} — Rs. {med.sellingPrice}
+                              <option
+                                key={med.id}
+                                value={med.id}
+                                disabled={med.totalStock <= 0}
+                              >
+                                {med.name} — Rs. {med.sellingPrice} — Stock: {med.totalStock}
                               </option>
                             ))}
                           </select>
