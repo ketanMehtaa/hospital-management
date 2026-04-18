@@ -527,7 +527,14 @@ export default function MedicineManager() {
           ) : (
             <div className="space-y-2">
               {displayed.map((med) => {
-                const low       = med.totalStock <= med.minStock;
+                const now = Date.now();
+                const activeStock = med.batches.reduce((acc, b) => {
+                  const expired = b.expiryDate ? new Date(b.expiryDate).getTime() < now : false;
+                  return acc + (expired ? 0 : b.quantity);
+                }, 0);
+                const expiredStock = med.totalStock - activeStock;
+
+                const low       = activeStock <= med.minStock;
                 const expanded  = expandedId === med.id;
                 const isEditRow = editingId === med.id;
 
@@ -547,6 +554,9 @@ export default function MedicineManager() {
                           {low && (
                             <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">Low stock</span>
                           )}
+                          {expiredStock > 0 && (
+                            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">{expiredStock} expired</span>
+                          )}
                         </div>
                         <p className="mt-0.5 text-xs text-zinc-400">
                           {med.unit} · Rs. {med.sellingPrice.toFixed(2)} · min {med.minStock}
@@ -556,7 +566,7 @@ export default function MedicineManager() {
                       {/* Stock */}
                       <div className="text-right min-w-[80px]">
                         <p className={`text-lg font-bold ${low ? 'text-rose-700' : 'text-zinc-950'}`}>
-                          {med.totalStock}
+                          {activeStock}
                         </p>
                         <p className="text-xs text-zinc-400">{med.batches.length} batch{med.batches.length !== 1 ? 'es' : ''}</p>
                       </div>
