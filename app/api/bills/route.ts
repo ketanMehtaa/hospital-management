@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
         where: {
           medicineId: { in: medIds },
           quantity: { gt: 0 },
-          OR: [{ expiryDate: null }, { expiryDate: { gte: new Date() } }],
         },
         orderBy: [{ expiryDate: "asc" }, { createdAt: "asc" }],
       });
@@ -134,7 +133,9 @@ export async function POST(request: NextRequest) {
         }
 
         let remaining = item.quantity;
+        let expiredAvailable = 0;
         const batches = inventory.get(item.medicineId) ?? [];
+        const now = new Date();
 
         for (const b of batches) {
           if (remaining <= 0) break;
@@ -142,6 +143,11 @@ export async function POST(request: NextRequest) {
           const available = Number(b.quantity) - deductedSoFar;
           
           if (available <= 0) continue;
+
+          if (b.expiryDate && new Date(b.expiryDate) < now) {
+            expiredAvailable += available;
+            continue;
+          }
 
           const take = Math.min(remaining, available);
           deductOps.set(b.id, deductedSoFar + take);
@@ -161,7 +167,10 @@ export async function POST(request: NextRequest) {
 
         if (remaining > 0) {
           const mName = item.description || item.medicineId;
-          throw new Error(`Insufficient stock for ${mName}. Short by ${remaining} unit(s).`);
+          if (expiredAvailable > 0 && expiredAvailable >= remaining) {
+            throw new Error(`Cannot add ${mName}. The remaining active stock is insufficient because ${expiredAvailable} unit(s) are expired.`);
+          }
+          throw new Error(`Insufficient stock for ${mName}. Short by ${remaining} unit(s)${expiredAvailable > 0 ? ` (and ${expiredAvailable} unit(s) are expired)` : ''}.`);
         }
       }
 

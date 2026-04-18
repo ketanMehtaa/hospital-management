@@ -79,8 +79,7 @@ const defaultCategoryPrices: Partial<Record<BillCategory, number>> = {
 };
 
 const getTodayDateInput = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 };
 
 const makeBlankItem = (): BillItemForm => ({
@@ -106,7 +105,7 @@ const billToFormState = (bill: BillPayload): FormState => ({
   patientId: bill.patientId ?? '',
   patientName: bill.patientName,
   phone: bill.phone ?? '',
-  billAt: new Date(bill.billAt).toLocaleDateString('en-CA'),
+  billAt: new Date(bill.billAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }),
   discount: String(bill.discount),
   paidCash: parseFloat(bill.paidCash) > 0 ? String(bill.paidCash) : '',
   paidOnline: parseFloat(bill.paidOnline) > 0 ? String(bill.paidOnline) : '',
@@ -118,6 +117,8 @@ const billToFormState = (bill: BillPayload): FormState => ({
     medicineId: item.medicineId ?? '',
   })),
 });
+
+const formatBillNum = (id: string) => id.split('-')[0].substring(0, 6).toUpperCase();
 
 // ─── Shared input class ───────────────────────────────────────────────────────
 
@@ -342,61 +343,57 @@ export default function BillManager() {
       doc.text('INVOICE', W - margin, 20, { align: 'right' });
 
       // ═══════════════════════════════════════════════════════════
-      // INVOICE META ROW
+      // PATIENT DETAILS
       // ═══════════════════════════════════════════════════════════
-      doc.setFillColor(241, 245, 249);   // slate-100
-      doc.rect(0, 36, W, 18, 'F');
+      let patientDetails = { age: '', diagnosis: '', visitAt: '' };
+      if (bill.patientId) {
+        try {
+          const pRes = await fetch(`/api/patients/${bill.patientId}`);
+          if (pRes.ok) {
+            const p = await pRes.json();
+            patientDetails.age = p.age ? `${p.age} Yrs` : '';
+            patientDetails.diagnosis = p.diagnosis || '';
+            patientDetails.visitAt = p.visitAt ? new Date(p.visitAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '';
+          }
+        } catch (e) {}
+      }
+
+      let y = 46;
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.text('Bill Number', margin, 43);
-      doc.text('Date', 80, 43);
-      doc.text('Status', 140, 43);
-
-      doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(15, 23, 42);
-      doc.text(bill.billNumber, margin, 50);
-      doc.text(new Date(bill.billAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), 80, 50);
-
-      // Status pill
-      doc.setFillColor(34, 197, 94);    // green-500
-      doc.roundedRect(140, 45, 24, 7, 2, 2, 'F');
-      doc.setFontSize(8);
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PAID', 152, 50, { align: 'center' });
-
-      // ═══════════════════════════════════════════════════════════
-      // PATIENT BLOCK  &  FROM BLOCK
-      // ═══════════════════════════════════════════════════════════
-      let y = 64;
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);   // slate-500
-      doc.text('BILL TO', margin, y);
-      doc.text('FROM', 110, y);
-
-      y += 5;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(15, 23, 42);
-      doc.text(bill.patientName, margin, y);
-      doc.text('Sharda ENT Hospital', 110, y);
-
-      y += 5;
+      
+      doc.text('Patient Name:', margin, y);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Phone: ${bill.phone || 'N/A'}`, margin, y);
-      doc.text('Chharaval Nayabad, Haldwani', 110, y);
+      doc.text(bill.patientName, margin + 26, y);
 
-      y += 4;
-      doc.text('Haldwani, Uttarakhand', 110, y);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Phone:', 100, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(bill.phone || 'N/A', 100 + 14, y);
 
-      y += 8;
+      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Age:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patientDetails.age || 'N/A', margin + 10, y);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Visit Time:', 100, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patientDetails.visitAt || new Date(bill.billAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), 100 + 21, y);
+
+      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Problem/Diagnosis:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      
+      const splitDiag = doc.splitTextToSize(patientDetails.diagnosis || 'N/A', W - margin - 50);
+      doc.text(splitDiag, margin + 35, y);
+
+      y += (splitDiag.length * 5) + 3;
+
       // Divider
       doc.setDrawColor(226, 232, 240);
       doc.setLineWidth(0.5);
@@ -487,17 +484,40 @@ export default function BillManager() {
       doc.text(`Rs. ${total.toFixed(2)}`, boxX + boxW, bY + 2, { align: 'right' });
       bY += 14;
 
-      // Payment badge
-      doc.setFontSize(8);
-      doc.setDrawColor(34, 197, 94);
-      doc.setTextColor(22, 101, 52);
+      // Payment badge removed.
+
+      // ═══════════════════════════════════════════════════════════
+      // INVOICE META ROW (Moved to Footer side)
+      // ═══════════════════════════════════════════════════════════
+      const pageH = 297;
+      
+      doc.setFillColor(241, 245, 249);   // slate-100
+      doc.rect(0, pageH - 40, W, 18, 'F');
+
       doc.setFont('helvetica', 'bold');
-      doc.text('✓  Payment Received in Full', boxX, bY);
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Bill Number', margin, pageH - 33);
+      doc.text('Date', 80, pageH - 33);
+      doc.text('Status', 140, pageH - 33);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(formatBillNum(bill.billNumber), margin, pageH - 26);
+      doc.text(new Date(bill.billAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }), 80, pageH - 26);
+
+      // Status pill
+      doc.setFillColor(34, 197, 94);    // green-500
+      doc.roundedRect(140, pageH - 31, 24, 7, 2, 2, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAID', 152, pageH - 26, { align: 'center' });
 
       // ═══════════════════════════════════════════════════════════
       // FOOTER
       // ═══════════════════════════════════════════════════════════
-      const pageH = 297;
       doc.setFillColor(10, 36, 78);
       doc.rect(0, pageH - 22, W, 22, 'F');
 
@@ -518,15 +538,43 @@ export default function BillManager() {
       doc.text('Thank you for choosing Sharda ENT Hospital. Wishing you speedy recovery!', W / 2, pageH - 5, { align: 'center' });
 
       // Save
-      doc.save(`${bill.billNumber}_Sharda_ENT.pdf`);
+      doc.save(`${formatBillNum(bill.billNumber)}_Sharda_ENT.pdf`);
 
       // Open WhatsApp with patient's number
       if (bill.phone) {
         const cleaned = bill.phone.replace(/\D/g, '');
         const wa = cleaned.length === 10 ? `91${cleaned}` : cleaned;
-        const msg = encodeURIComponent(
-          `Hello ${bill.patientName}, your bill (${bill.billNumber}) from Sharda ENT Hospital has been generated. Please find the attached PDF. Thank you!`
-        );
+        
+        let itemsText = bill.items.map(i => {
+           return `${Number(i.quantity)}x ${i.description} - Rs. ${(Number(i.quantity) * Number(i.unitPrice)).toFixed(2)}`;
+        }).join('\n');
+
+        const sub = (Number(bill.totalAmount) + Number(bill.discount)).toFixed(2);
+        const disc = Number(bill.discount).toFixed(2);
+        const tot = Number(bill.totalAmount).toFixed(2);
+
+        const rawMsg = `🏥 *Sharda ENT Hospital & Diagnostic Centre*
+
+Hello *${bill.patientName}*,
+Here is the summary of your recent visit:
+
+📄 *Bill No:* ${formatBillNum(bill.billNumber)}
+📅 *Date:* ${new Date(bill.billAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+
+*------- SERVICES & ITEMS -------*
+${itemsText}
+*--------------------------------*
+
+*Subtotal:* Rs. ${sub}
+*Discount:* - Rs. ${disc}
+*Total Amount:* Rs. ${tot}
+
+✅ *Payment Status: PAID*
+
+Thank you for choosing us! Wishing you a speedy recovery ✨
+_(Official PDF invoice attached below)_`.trim();
+
+        const msg = encodeURIComponent(rawMsg);
         window.open(`https://wa.me/${wa}?text=${msg}`, '_blank');
       } else {
         alert('PDF downloaded. No phone number found — please open WhatsApp manually.');
@@ -659,18 +707,17 @@ export default function BillManager() {
         id="bill-form-section"
         className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20"
       >
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500">
-              {isEditing ? 'Editing bill' : 'Billing system'}
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-zinc-950">
-              {isEditing ? 'Edit bill record' : 'Create new bill'}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {isEditing && (
+        {isEditing ? (
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500">
+                Editing bill
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-zinc-950">
+                Edit bill record
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={cancelEdit}
@@ -678,9 +725,9 @@ export default function BillManager() {
               >
                 Cancel edit
               </button>
-            )}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {isEditing && (
           <div className="mb-4 flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -689,7 +736,7 @@ export default function BillManager() {
             </svg>
             Editing&nbsp;
             <span className="font-semibold">
-              {bills.find((b) => b.id === editingId)?.billNumber ?? 'bill'}
+              {bills.find((b) => b.id === editingId) ? formatBillNum(bills.find((b) => b.id === editingId)!.billNumber) : 'bill'}
             </span>
             &mdash; submit to save changes.
           </div>
@@ -1122,13 +1169,13 @@ export default function BillManager() {
                       key={bill.id}
                       className={`transition ${editingId === bill.id ? 'bg-amber-50' : 'hover:bg-zinc-50'}`}
                     >
-                      <td className="px-4 py-3 font-semibold text-zinc-950">{bill.billNumber}</td>
+                      <td className="px-4 py-3 font-semibold text-zinc-950">{formatBillNum(bill.billNumber)}</td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-zinc-950">{bill.patientName}</p>
                         {bill.phone && <p className="text-xs text-zinc-400">{bill.phone}</p>}
                       </td>
                       <td className="px-4 py-3 text-zinc-600">
-                        {new Date(bill.billAt).toLocaleDateString()}
+                        {new Date(bill.billAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                       </td>
                       <td className="px-4 py-3 text-zinc-600">
                         {bill.items.length} item{bill.items.length !== 1 ? 's' : ''}

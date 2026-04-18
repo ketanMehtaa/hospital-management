@@ -26,18 +26,11 @@ type FormState = {
 };
 
 const getTodayDateInput = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 };
 
 const getCurrentTimeInput = () => {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
+  return new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 };
 
 const createInitialFormState = (): FormState => ({
@@ -51,11 +44,10 @@ const createInitialFormState = (): FormState => ({
   visitTime: getCurrentTimeInput(),
 });
 
-/** Convert a stored ISO visitAt into separate date + time inputs */
 const visitAtToFormFields = (visitAt: string): { visitDate: string; visitTime: string } => {
   const d = new Date(visitAt);
-  const visitDate = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
-  const visitTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const visitDate = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const visitTime = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
   return { visitDate, visitTime };
 };
 
@@ -437,11 +429,12 @@ export default function PatientManager() {
                   >
                     <td className="px-4 py-3 font-semibold text-zinc-950">{patient.name}</td>
                     <td className="px-4 py-3">
-                      <div>{new Date(patient.visitAt).toLocaleDateString()}</div>
+                      <div>{new Date(patient.visitAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
                       <div className="text-xs text-zinc-500">
-                        {new Date(patient.visitAt).toLocaleTimeString([], {
+                        {new Date(patient.visitAt).toLocaleTimeString('en-IN', {
                           hour: '2-digit',
                           minute: '2-digit',
+                          timeZone: 'Asia/Kolkata'
                         })}
                       </div>
                     </td>

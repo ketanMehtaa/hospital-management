@@ -23,7 +23,7 @@ type DashboardData = {
 const fmt = (n: number) =>
   n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const today = () => new Date().toLocaleDateString('en-CA');
+const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
 const CATEGORY_COLORS: Record<string, string> = {
   OpdConsultation: '#6366f1',

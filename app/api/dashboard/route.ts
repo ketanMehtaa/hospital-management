@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   // ── Date range ─────────────────────────────────────────────────────────────
   const now = new Date();
-  const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD local
+  const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
   const fromStr = searchParams.get('from') ?? todayStr;
   const toStr   = searchParams.get('to')   ?? todayStr;
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     totalDiscount += discount;
 
     // Daily buckets
-    const dateKey = new Date(bill.billAt).toLocaleDateString('en-CA');
+    const dateKey = new Date(bill.billAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     if (!dailyMap[dateKey]) dailyMap[dateKey] = { revenue: 0, cash: 0, online: 0, bills: 0 };
     dailyMap[dateKey].revenue += revenue;
     dailyMap[dateKey].cash    += cash;
