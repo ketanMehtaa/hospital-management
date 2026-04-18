@@ -92,12 +92,21 @@ export default function PatientManager() {
         }),
       });
 
-      const result = await response.json();
+      const isJsonResponse = response.headers.get('content-type')?.includes('application/json');
+      const result = isJsonResponse ? ((await response.json()) as PatientPayload | { error?: string }) : null;
       if (!response.ok) {
-        throw new Error(result?.error || 'Could not create patient.');
+        const message = result && 'error' in result ? result.error : undefined;
+        throw new Error(message || `Could not create patient. (HTTP ${response.status})`);
       }
 
-      setPatients((current) => [result, ...current]);
+      const createdPatient =
+        result && typeof result === 'object' && 'id' in result && 'name' in result ? (result as PatientPayload) : null;
+
+      if (!createdPatient) {
+        throw new Error('Server returned an invalid response while saving the patient.');
+      }
+
+      setPatients((current) => [createdPatient, ...current]);
       setForm(initialFormState);
       setSuccess('Patient saved successfully.');
     } catch (err) {
@@ -126,7 +135,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Name*
             <input
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.name}
               onChange={(event) => handleChange('name', event.target.value)}
               required
@@ -136,7 +145,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Age
             <input
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               type="number"
               min="0"
               value={form.age}
@@ -147,7 +156,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Gender
             <select
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.gender}
               onChange={(event) => handleChange('gender', event.target.value)}
             >
@@ -161,7 +170,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Phone
             <input
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.phone}
               onChange={(event) => handleChange('phone', event.target.value)}
             />
@@ -170,7 +179,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Visit date*
             <input
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               type="date"
               value={form.visitDate}
               onChange={(event) => handleChange('visitDate', event.target.value)}
@@ -181,7 +190,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Visit time
             <input
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.visitTime}
               onChange={(event) => handleChange('visitTime', event.target.value)}
               placeholder="09:30 AM"
@@ -191,7 +200,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Patient type
             <select
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.patientType}
               onChange={(event) => handleChange('patientType', event.target.value)}
             >
@@ -203,7 +212,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700 md:col-span-2">
             Address
             <textarea
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               rows={3}
               value={form.address}
               onChange={(event) => handleChange('address', event.target.value)}
@@ -213,7 +222,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Diagnosis
             <input
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.diagnosis}
               onChange={(event) => handleChange('diagnosis', event.target.value)}
             />
@@ -222,7 +231,7 @@ export default function PatientManager() {
           <label className="space-y-2 text-sm text-zinc-700">
             Notes
             <textarea
-              className="w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               rows={3}
               value={form.notes}
               onChange={(event) => handleChange('notes', event.target.value)}
@@ -278,8 +287,8 @@ export default function PatientManager() {
                       {patient.visitTime ? <div className="text-xs text-zinc-500">{patient.visitTime}</div> : null}
                     </td>
                     <td className="px-4 py-3">{patient.patientType}</td>
-                    <td className="px-4 py-3">{patient.phone || '—'}</td>
-                    <td className="px-4 py-3">{patient.diagnosis || '—'}</td>
+                    <td className="px-4 py-3">{patient.phone || '--'}</td>
+                    <td className="px-4 py-3">{patient.diagnosis || '--'}</td>
                   </tr>
                 ))}
               </tbody>

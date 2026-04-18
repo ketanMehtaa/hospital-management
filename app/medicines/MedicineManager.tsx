@@ -59,7 +59,7 @@ const categories = [
 const units = ['Strip', 'Bottle', 'Tube', 'Vial', 'Sachet', 'Tablet', 'Capsule'];
 
 const inputClass =
-  'w-full rounded-2xl w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
+  'w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
 
 export default function MedicineManager() {
   const [medicines, setMedicines] = useState<MedicinePayload[]>([]);
@@ -151,8 +151,8 @@ export default function MedicineManager() {
               <p className="mt-2 text-2xl font-semibold text-zinc-950">{totalItems}</p>
             </div>
             <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              <p className="text-xs uppercase tracking-[0.3em] text-rose-600 text-rose-400">Low stock</p>
-              <p className="mt-2 text-2xl font-semibold text-rose-700 text-rose-100">{lowStockCount}</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-rose-600">Low stock</p>
+              <p className="mt-2 text-2xl font-semibold text-rose-700">{lowStockCount}</p>
             </div>
           </div>
         </div>
@@ -214,7 +214,7 @@ export default function MedicineManager() {
               <label className="space-y-2 text-sm text-zinc-700">
                 Selling price*
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">₹</span>
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">Rs. </span>
                   <input
                     className={`${inputClass} pl-9`}
                     type="number"
@@ -229,7 +229,7 @@ export default function MedicineManager() {
               <label className="space-y-2 text-sm text-zinc-700">
                 Buying price
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">₹</span>
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">Rs. </span>
                   <input
                     className={`${inputClass} pl-9`}
                     type="number"
@@ -368,9 +368,9 @@ export default function MedicineManager() {
                       <td className="px-4 py-3">{medicine.stock}</td>
                       <td className="px-4 py-3">{medicine.minStock}</td>
                       <td className="px-4 py-3">{medicine.unit}</td>
-                      <td className="px-4 py-3">₹{medicine.sellingPrice.toFixed(2)}</td>
+                      <td className="px-4 py-3">Rs. {medicine.sellingPrice.toFixed(2)}</td>
                       <td className="px-4 py-3">
-                        {medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : '—'}
+                        {medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : '--'}
                       </td>
                     </tr>
                   );
