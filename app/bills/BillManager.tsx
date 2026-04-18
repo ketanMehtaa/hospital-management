@@ -306,22 +306,45 @@ export default function BillManager() {
     try {
       const doc = new jsPDF();
       
-      doc.setFontSize(22);
-      doc.setTextColor('#18181b');
-      doc.text('HOSPITAL BILL', 14, 22);
+      // ── Header / Hospital Context ──
+      doc.setFontSize(20);
+      doc.setTextColor('#0f172a');
+      doc.setFont("helvetica", "bold");
+      doc.text('Sharda ENT Hospital & Diagnostic Centre', 14, 22);
+
+      doc.setFontSize(10);
+      doc.setTextColor('#64748b');
+      doc.setFont("helvetica", "normal");
+      doc.text('Chharaval Nayabad, Haldwani', 14, 30);
+      doc.text('ENT Doctors | Hospitals', 14, 35);
+
+      // ── Invoice Meta ──
+      doc.setFontSize(14);
+      doc.setTextColor('#0f172a');
+      doc.setFont("helvetica", "bold");
+      doc.text('INVOICE', 140, 22);
       
       doc.setFontSize(10);
-      doc.setTextColor('#71717a');
-      doc.text(`Bill #: ${bill.billNumber}`, 14, 30);
-      doc.text(`Date: ${new Date(bill.billAt).toLocaleDateString('en-IN')}`, 14, 35);
+      doc.setTextColor('#475569');
+      doc.setFont("helvetica", "normal");
+      doc.text(`Bill #: ${bill.billNumber}`, 140, 30);
+      doc.text(`Date: ${new Date(bill.billAt).toLocaleDateString('en-IN')}`, 140, 35);
+
+      // Divider
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, 42, 196, 42);
       
-      doc.setFontSize(12);
-      doc.setTextColor('#18181b');
-      doc.text('Patient Details', 14, 45);
+      // ── Patient Info ──
+      doc.setFontSize(11);
+      doc.setTextColor('#0f172a');
+      doc.setFont("helvetica", "bold");
+      doc.text('Bill To:', 14, 52);
+      
       doc.setFontSize(10);
-      doc.setTextColor('#52525b');
-      doc.text(`Name: ${bill.patientName}`, 14, 52);
-      doc.text(`Phone: ${bill.phone || 'N/A'}`, 14, 57);
+      doc.setTextColor('#334155');
+      doc.setFont("helvetica", "normal");
+      doc.text(`${bill.patientName}`, 14, 58);
+      doc.text(`Phone: ${bill.phone || 'N/A'}`, 14, 63);
 
       const tableColumn = ["Description", "Category", "Qty", "Unit Price", "Amount"];
       const tableRows = bill.items.map(item => {
@@ -337,46 +360,41 @@ export default function BillManager() {
       });
 
       autoTable(doc, {
-        startY: 65,
+        startY: 72,
         head: [tableColumn],
         body: tableRows,
         theme: 'striped',
-        headStyles: { fillColor: [24, 24, 27] },
+        headStyles: { fillColor: [15, 23, 42] },
+        styles: { textColor: [51, 65, 85] },
       });
 
-      const finalY = (doc as any).lastAutoTable.finalY || 65;
+      const finalY = (doc as any).lastAutoTable.finalY || 72;
       
       doc.setFontSize(10);
-      doc.text(`Subtotal: Rs. ${(parseFloat(bill.totalAmount) + parseFloat(bill.discount)).toFixed(2)}`, 140, finalY + 10);
-      doc.text(`Discount: Rs. ${parseFloat(bill.discount).toFixed(2)}`, 140, finalY + 16);
+      doc.text(`Subtotal: Rs. ${(parseFloat(bill.totalAmount) + parseFloat(bill.discount)).toFixed(2)}`, 140, finalY + 12);
+      doc.text(`Discount: Rs. ${parseFloat(bill.discount).toFixed(2)}`, 140, finalY + 18);
       
       doc.setFontSize(12);
-      doc.setTextColor('#18181b');
+      doc.setTextColor('#0f172a');
       doc.setFont("helvetica", "bold");
-      doc.text(`Total: Rs. ${parseFloat(bill.totalAmount).toFixed(2)}`, 140, finalY + 24);
+      doc.text(`Total: Rs. ${parseFloat(bill.totalAmount).toFixed(2)}`, 140, finalY + 28);
 
-      const pdfBlob = doc.output('blob');
-      const file = new File([pdfBlob], `${bill.billNumber}.pdf`, { type: 'application/pdf' });
+      // Download PDF directly (WhatsApp Web/App doesn't support pre-filling documents)
+      doc.save(`${bill.billNumber}_Sharda_ENT.pdf`);
       
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Bill ${bill.billNumber}`,
-          text: `Here is your detailed hospital bill.`,
-        });
-      } else {
-        doc.save(`${bill.billNumber}.pdf`);
+      // Explicitly redirect to this patient's WhatsApp
+      if (bill.phone) {
         let waUrl = `https://wa.me/`;
-        if (bill.phone) {
-           const cleaned = bill.phone.replace(/\D/g, '');
-           waUrl += cleaned.length === 10 ? `91${cleaned}` : cleaned;
-        }
-        waUrl += `?text=Here%20is%20your%20bill%20(${bill.billNumber}).%20Please%20find%20the%20attached%20PDF.`;
+        const cleaned = bill.phone.replace(/\D/g, '');
+        waUrl += cleaned.length === 10 ? `91${cleaned}` : cleaned;
+        waUrl += `?text=Hello%20${encodeURIComponent(bill.patientName)},%20here%20is%20your%20bill%20(${bill.billNumber}).%20Please%20find%20the%20downloaded%20PDF%20attached.`;
         window.open(waUrl, '_blank');
+      } else {
+        alert('PDF Downloaded. No phone number is attached to this bill to automatically open WhatsApp.');
       }
     } catch (err) {
       console.error(err);
-      alert('Could not generate or share PDF.');
+      alert('Could not generate PDF.');
     }
   };
 
