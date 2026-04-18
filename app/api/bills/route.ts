@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@/app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -37,10 +37,15 @@ type BillItemPayload = {
   medicine?: { id: string; name: string } | null;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const limitStr = searchParams.get("limit");
+  const limit = limitStr ? parseInt(limitStr, 10) : undefined;
+
   try {
     const bills = await prisma.bill.findMany({
       where: { deletedAt: null },
+      take: limit && !isNaN(limit) ? limit : undefined,
       include: {
         items: {
           include: {

@@ -170,7 +170,7 @@ export default function BillManager() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/bills', { cache: 'no-store' });
+      const res = await fetch('/api/bills?limit=50', { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load bills.');
       setBills((await res.json()) as BillPayload[]);
     } catch (err) {
@@ -603,7 +603,14 @@ export default function BillManager() {
           patientId: form.patientId || undefined,
           patientName: form.patientName.trim(),
           phone: form.phone || undefined,
-          billAt: form.billAt,
+          billAt: (() => {
+            const [y, m, d] = form.billAt.split('-');
+            const now = new Date();
+            if (y && m && d) {
+              now.setFullYear(parseInt(y), parseInt(m) - 1, parseInt(d));
+            }
+            return now.toISOString();
+          })(),
           discount: parseFloat(form.discount) || 0,
           paidCash: cashVal,
           paidOnline: onlineVal,

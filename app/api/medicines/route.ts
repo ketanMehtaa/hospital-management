@@ -53,7 +53,6 @@ export async function GET() {
     where: { deletedAt: null },
     include: {
       batches: {
-        where: { quantity: { gt: 0 } },
         orderBy: { expiryDate: 'asc' },
       },
     },

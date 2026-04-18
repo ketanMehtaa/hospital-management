@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 
   // ── Patients registered in range ───────────────────────────────────────────
   const patientCount = await prisma.patient.count({
-    where: { deletedAt: null, createdAt: { gte: from, lte: to } },
+    where: { deletedAt: null },
   });
 
   // ── Top medicines ──────────────────────────────────────────────────────────
