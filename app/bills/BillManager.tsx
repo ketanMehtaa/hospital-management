@@ -304,98 +304,237 @@ export default function BillManager() {
 
   const handleWhatsAppShare = async (bill: BillPayload) => {
     try {
-      const doc = new jsPDF();
-      
-      // ── Header / Hospital Context ──
-      doc.setFontSize(20);
-      doc.setTextColor('#0f172a');
-      doc.setFont("helvetica", "bold");
-      doc.text('Sharda ENT Hospital & Diagnostic Centre', 14, 22);
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const W = 210;
+      const margin = 14;
 
+      // ═══════════════════════════════════════════════════════════
+      // HEADER BAND
+      // ═══════════════════════════════════════════════════════════
+      // Dark navy header bar
+      doc.setFillColor(10, 36, 78);
+      doc.rect(0, 0, W, 36, 'F');
+
+      // Hospital name
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(255, 255, 255);
+      doc.text('Sharda ENT Hospital & Diagnostic Centre', margin, 13);
+
+      // Speciality tag
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(186, 214, 255);
+      doc.text('ENT Specialist  |  Diagnostic Centre  |  Healthcare', margin, 19.5);
+
+      // Full address
+      doc.setFontSize(8);
+      doc.setTextColor(180, 207, 250);
+      doc.text(
+        '17, Near Uttarakhand Grahmin Bank, Near Shiv Shakti Vihar, Chharaval Nayabad, Haldwani - 263139, Uttarakhand',
+        margin, 26
+      );
+
+      // INVOICE label (right side in header)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(255, 255, 255);
+      doc.text('INVOICE', W - margin, 20, { align: 'right' });
+
+      // ═══════════════════════════════════════════════════════════
+      // INVOICE META ROW
+      // ═══════════════════════════════════════════════════════════
+      doc.setFillColor(241, 245, 249);   // slate-100
+      doc.rect(0, 36, W, 18, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Bill Number', margin, 43);
+      doc.text('Date', 80, 43);
+      doc.text('Status', 140, 43);
+
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.setTextColor('#64748b');
-      doc.setFont("helvetica", "normal");
-      doc.text('Chharaval Nayabad, Haldwani', 14, 30);
-      doc.text('ENT Doctors | Hospitals', 14, 35);
+      doc.setTextColor(15, 23, 42);
+      doc.text(bill.billNumber, margin, 50);
+      doc.text(new Date(bill.billAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), 80, 50);
 
-      // ── Invoice Meta ──
-      doc.setFontSize(14);
-      doc.setTextColor('#0f172a');
-      doc.setFont("helvetica", "bold");
-      doc.text('INVOICE', 140, 22);
-      
-      doc.setFontSize(10);
-      doc.setTextColor('#475569');
-      doc.setFont("helvetica", "normal");
-      doc.text(`Bill #: ${bill.billNumber}`, 140, 30);
-      doc.text(`Date: ${new Date(bill.billAt).toLocaleDateString('en-IN')}`, 140, 35);
+      // Status pill
+      doc.setFillColor(34, 197, 94);    // green-500
+      doc.roundedRect(140, 45, 24, 7, 2, 2, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAID', 152, 50, { align: 'center' });
 
+      // ═══════════════════════════════════════════════════════════
+      // PATIENT BLOCK  &  FROM BLOCK
+      // ═══════════════════════════════════════════════════════════
+      let y = 64;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);   // slate-500
+      doc.text('BILL TO', margin, y);
+      doc.text('FROM', 110, y);
+
+      y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      doc.text(bill.patientName, margin, y);
+      doc.text('Sharda ENT Hospital', 110, y);
+
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Phone: ${bill.phone || 'N/A'}`, margin, y);
+      doc.text('Chharaval Nayabad, Haldwani', 110, y);
+
+      y += 4;
+      doc.text('Haldwani, Uttarakhand', 110, y);
+
+      y += 8;
       // Divider
       doc.setDrawColor(226, 232, 240);
-      doc.line(14, 42, 196, 42);
-      
-      // ── Patient Info ──
-      doc.setFontSize(11);
-      doc.setTextColor('#0f172a');
-      doc.setFont("helvetica", "bold");
-      doc.text('Bill To:', 14, 52);
-      
-      doc.setFontSize(10);
-      doc.setTextColor('#334155');
-      doc.setFont("helvetica", "normal");
-      doc.text(`${bill.patientName}`, 14, 58);
-      doc.text(`Phone: ${bill.phone || 'N/A'}`, 14, 63);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, W - margin, y);
+      y += 6;
 
-      const tableColumn = ["Description", "Category", "Qty", "Unit Price", "Amount"];
+      // ═══════════════════════════════════════════════════════════
+      // ITEMS TABLE
+      // ═══════════════════════════════════════════════════════════
       const tableRows = bill.items.map(item => {
         const qty = Number(item.quantity) || 0;
         const price = Number(item.unitPrice) || 0;
-        return [
-          item.description,
-          item.category,
-          qty.toString(),
-          `Rs. ${price.toFixed(2)}`,
-          `Rs. ${(qty * price).toFixed(2)}`
-        ];
+        return [item.description, item.category, qty.toString(), `Rs. ${price.toFixed(2)}`, `Rs. ${(qty * price).toFixed(2)}`];
       });
 
       autoTable(doc, {
-        startY: 72,
-        head: [tableColumn],
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [['Description', 'Category', 'Qty', 'Unit Price', 'Amount']],
         body: tableRows,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 23, 42] },
-        styles: { textColor: [51, 65, 85] },
+        theme: 'grid',
+        headStyles: {
+          fillColor: [10, 36, 78],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9,
+          cellPadding: 4,
+        },
+        bodyStyles: {
+          fontSize: 9,
+          cellPadding: 3.5,
+          textColor: [51, 65, 85],
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 30 },
+          2: { halign: 'center', cellWidth: 16 },
+          3: { halign: 'right' },
+          4: { halign: 'right', fontStyle: 'bold' },
+        },
       });
 
-      const finalY = (doc as any).lastAutoTable.finalY || 72;
-      
-      doc.setFontSize(10);
-      doc.text(`Subtotal: Rs. ${(parseFloat(bill.totalAmount) + parseFloat(bill.discount)).toFixed(2)}`, 140, finalY + 12);
-      doc.text(`Discount: Rs. ${parseFloat(bill.discount).toFixed(2)}`, 140, finalY + 18);
-      
-      doc.setFontSize(12);
-      doc.setTextColor('#0f172a');
-      doc.setFont("helvetica", "bold");
-      doc.text(`Total: Rs. ${parseFloat(bill.totalAmount).toFixed(2)}`, 140, finalY + 28);
+      // ═══════════════════════════════════════════════════════════
+      // SUMMARY BOX
+      // ═══════════════════════════════════════════════════════════
+      const afterTable = (doc as any).lastAutoTable.finalY + 8;
+      const boxX = W - margin - 72;
+      const boxW = 72;
+      let bY = afterTable;
 
-      // Download PDF directly (WhatsApp Web/App doesn't support pre-filling documents)
+      const subtotal = Number(bill.totalAmount) + Number(bill.discount);
+      const discount = Number(bill.discount);
+      const total = Number(bill.totalAmount);
+      const cash = Number(bill.paidCash);
+      const online = Number(bill.paidOnline);
+
+      // Summary rows
+      const rows = [
+        ['Subtotal', `Rs. ${subtotal.toFixed(2)}`],
+        ['Discount', `- Rs. ${discount.toFixed(2)}`],
+        ['Cash Paid', `Rs. ${cash.toFixed(2)}`],
+        ['Online Paid', `Rs. ${online.toFixed(2)}`],
+      ];
+
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      for (const [label, value] of rows) {
+        doc.text(label, boxX, bY);
+        doc.text(value, boxX + boxW, bY, { align: 'right' });
+        bY += 6;
+      }
+
+      // Total divider
+      doc.setDrawColor(10, 36, 78);
+      doc.setLineWidth(0.6);
+      doc.line(boxX, bY, boxX + boxW, bY);
+      bY += 5;
+
+      // Total row (bold)
+      doc.setFillColor(10, 36, 78);
+      doc.roundedRect(boxX - 2, bY - 5, boxW + 4, 10, 1.5, 1.5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text('TOTAL', boxX, bY + 2);
+      doc.text(`Rs. ${total.toFixed(2)}`, boxX + boxW, bY + 2, { align: 'right' });
+      bY += 14;
+
+      // Payment badge
+      doc.setFontSize(8);
+      doc.setDrawColor(34, 197, 94);
+      doc.setTextColor(22, 101, 52);
+      doc.setFont('helvetica', 'bold');
+      doc.text('✓  Payment Received in Full', boxX, bY);
+
+      // ═══════════════════════════════════════════════════════════
+      // FOOTER
+      // ═══════════════════════════════════════════════════════════
+      const pageH = 297;
+      doc.setFillColor(10, 36, 78);
+      doc.rect(0, pageH - 22, W, 22, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text('Sharda ENT Hospital & Diagnostic Centre', W / 2, pageH - 15, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(180, 207, 250);
+      doc.text(
+        '17, Chharaval Nayabad, Near Uttarakhand Grahmin Bank, Haldwani - 263139, Uttarakhand',
+        W / 2, pageH - 10, { align: 'center' }
+      );
+
+      doc.setTextColor(150, 190, 240);
+      doc.text('Thank you for choosing Sharda ENT Hospital. Wishing you speedy recovery!', W / 2, pageH - 5, { align: 'center' });
+
+      // Save
       doc.save(`${bill.billNumber}_Sharda_ENT.pdf`);
-      
-      // Explicitly redirect to this patient's WhatsApp
+
+      // Open WhatsApp with patient's number
       if (bill.phone) {
-        let waUrl = `https://wa.me/`;
         const cleaned = bill.phone.replace(/\D/g, '');
-        waUrl += cleaned.length === 10 ? `91${cleaned}` : cleaned;
-        waUrl += `?text=Hello%20${encodeURIComponent(bill.patientName)},%20here%20is%20your%20bill%20(${bill.billNumber}).%20Please%20find%20the%20downloaded%20PDF%20attached.`;
-        window.open(waUrl, '_blank');
+        const wa = cleaned.length === 10 ? `91${cleaned}` : cleaned;
+        const msg = encodeURIComponent(
+          `Hello ${bill.patientName}, your bill (${bill.billNumber}) from Sharda ENT Hospital has been generated. Please find the attached PDF. Thank you!`
+        );
+        window.open(`https://wa.me/${wa}?text=${msg}`, '_blank');
       } else {
-        alert('PDF Downloaded. No phone number is attached to this bill to automatically open WhatsApp.');
+        alert('PDF downloaded. No phone number found — please open WhatsApp manually.');
       }
     } catch (err) {
       console.error(err);
       alert('Could not generate PDF.');
-    }
+    };
   };
 
   // ── Edit helpers ────────────────────────────────────────────────────────────
