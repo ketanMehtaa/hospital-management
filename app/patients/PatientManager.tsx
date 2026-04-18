@@ -3,17 +3,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 
 type PatientPayload = {
-  id: number;
+  id: string;
   name: string;
   age: number | null;
   gender: string | null;
   phone: string | null;
   address: string | null;
   diagnosis: string | null;
-  notes: string | null;
-  visitDate: string;
-  visitTime: string | null;
-  patientType: string;
+  visitAt: string;
   createdAt: string;
 };
 
@@ -24,28 +21,39 @@ type FormState = {
   phone: string;
   address: string;
   diagnosis: string;
-  notes: string;
   visitDate: string;
   visitTime: string;
-  patientType: string;
 };
 
-const initialFormState: FormState = {
+const getTodayDateInput = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentTimeInput = () => {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+const createInitialFormState = (): FormState => ({
   name: '',
   age: '',
   gender: '',
   phone: '',
   address: '',
   diagnosis: '',
-  notes: '',
-  visitDate: new Date().toISOString().slice(0, 10),
-  visitTime: '',
-  patientType: 'fresh',
-};
+  visitDate: getTodayDateInput(),
+  visitTime: getCurrentTimeInput(),
+});
 
 export default function PatientManager() {
   const [patients, setPatients] = useState<PatientPayload[]>([]);
-  const [form, setForm] = useState<FormState>(initialFormState);
+  const [form, setForm] = useState<FormState>(() => createInitialFormState());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -76,6 +84,26 @@ export default function PatientManager() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const handlePhoneChange = (value: string) => {
+    const normalizedPhone = value.replace(/\D/g, '').slice(0, 10);
+    handleChange('phone', normalizedPhone);
+  };
+
+  const handleAgeChange = (value: string) => {
+    if (!value) {
+      handleChange('age', '');
+      return;
+    }
+
+    const numericAge = Number(value);
+    if (Number.isNaN(numericAge)) {
+      return;
+    }
+
+    const clampedAge = Math.min(110, Math.max(0, Math.trunc(numericAge)));
+    handleChange('age', String(clampedAge));
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
@@ -83,13 +111,22 @@ export default function PatientManager() {
     setSuccess(null);
 
     try {
+      if (form.phone.length !== 10) {
+        throw new Error('Phone number must be exactly 10 digits.');
+      }
+
       const response = await fetch('/api/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          age: form.age ? Number(form.age) : undefined,
-        }),
+        body: JSON.stringify((() => {
+          const resolvedVisitTime = form.visitTime || getCurrentTimeInput();
+          const visitAt = new Date(`${form.visitDate}T${resolvedVisitTime}:00`).toISOString();
+          return {
+            ...form,
+            age: form.age ? Number(form.age) : undefined,
+            visitAt,
+          };
+        })()),
       });
 
       const isJsonResponse = response.headers.get('content-type')?.includes('application/json');
@@ -107,7 +144,7 @@ export default function PatientManager() {
       }
 
       setPatients((current) => [createdPatient, ...current]);
-      setForm(initialFormState);
+      setForm(createInitialFormState());
       setSuccess('Patient saved successfully.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -143,22 +180,26 @@ export default function PatientManager() {
           </label>
 
           <label className="space-y-2 text-sm text-zinc-700">
-            Age
+            Age*
             <input
               className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               type="number"
               min="0"
+              max="110"
+              step="1"
               value={form.age}
-              onChange={(event) => handleChange('age', event.target.value)}
+              onChange={(event) => handleAgeChange(event.target.value)}
+              required
             />
           </label>
 
           <label className="space-y-2 text-sm text-zinc-700">
-            Gender
+            Gender*
             <select
               className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.gender}
               onChange={(event) => handleChange('gender', event.target.value)}
+              required
             >
               <option value="">Select gender</option>
               <option value="Male">Male</option>
@@ -168,11 +209,17 @@ export default function PatientManager() {
           </label>
 
           <label className="space-y-2 text-sm text-zinc-700">
-            Phone
+            Phone*
             <input
               className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              type="tel"
+              inputMode="numeric"
+              minLength={10}
+              maxLength={10}
+              pattern="\d{10}"
               value={form.phone}
-              onChange={(event) => handleChange('phone', event.target.value)}
+              onChange={(event) => handlePhoneChange(event.target.value)}
+              required
             />
           </label>
 
@@ -191,22 +238,11 @@ export default function PatientManager() {
             Visit time
             <input
               className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              type="time"
               value={form.visitTime}
               onChange={(event) => handleChange('visitTime', event.target.value)}
-              placeholder="09:30 AM"
+              required
             />
-          </label>
-
-          <label className="space-y-2 text-sm text-zinc-700">
-            Patient type
-            <select
-              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-              value={form.patientType}
-              onChange={(event) => handleChange('patientType', event.target.value)}
-            >
-              <option value="fresh">Fresh</option>
-              <option value="followup">Follow-up</option>
-            </select>
           </label>
 
           <label className="space-y-2 text-sm text-zinc-700 md:col-span-2">
@@ -225,16 +261,6 @@ export default function PatientManager() {
               className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
               value={form.diagnosis}
               onChange={(event) => handleChange('diagnosis', event.target.value)}
-            />
-          </label>
-
-          <label className="space-y-2 text-sm text-zinc-700">
-            Notes
-            <textarea
-              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-              rows={3}
-              value={form.notes}
-              onChange={(event) => handleChange('notes', event.target.value)}
             />
           </label>
 
@@ -273,7 +299,6 @@ export default function PatientManager() {
                 <tr>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Visit</th>
-                  <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium">Phone</th>
                   <th className="px-4 py-3 font-medium">Diagnosis</th>
                 </tr>
@@ -283,10 +308,11 @@ export default function PatientManager() {
                   <tr key={patient.id} className="hover:bg-zinc-50">
                     <td className="px-4 py-3 font-semibold text-zinc-950">{patient.name}</td>
                     <td className="px-4 py-3">
-                      <div>{new Date(patient.visitDate).toLocaleDateString()}</div>
-                      {patient.visitTime ? <div className="text-xs text-zinc-500">{patient.visitTime}</div> : null}
+                      <div>{new Date(patient.visitAt).toLocaleDateString()}</div>
+                      <div className="text-xs text-zinc-500">
+                        {new Date(patient.visitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </td>
-                    <td className="px-4 py-3">{patient.patientType}</td>
                     <td className="px-4 py-3">{patient.phone || '--'}</td>
                     <td className="px-4 py-3">{patient.diagnosis || '--'}</td>
                   </tr>

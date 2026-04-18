@@ -11,12 +11,36 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),
 });
 
+type MedicineRecord = Awaited<ReturnType<typeof prisma.medicine.findMany>>[number];
+
+const toNumberInput = (value: unknown) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+};
+
+const toMedicinePayload = (medicine: MedicineRecord) => ({
+  ...medicine,
+  buyingPrice: medicine.buyingPrice === null ? null : Number(medicine.buyingPrice),
+  sellingPrice: Number(medicine.sellingPrice),
+  stock: Number(medicine.stock),
+  minStock: Number(medicine.minStock),
+});
+
 export async function GET() {
   const medicines = await prisma.medicine.findMany({
+    where: { deletedAt: null },
     orderBy: [{ stock: 'asc' }, { name: 'asc' }],
   });
 
-  return NextResponse.json(medicines);
+  return NextResponse.json(medicines.map(toMedicinePayload));
 }
 
 export async function POST(request: NextRequest) {
@@ -27,22 +51,40 @@ export async function POST(request: NextRequest) {
       name?: string;
       category?: string;
       unit?: string;
-      buyingPrice?: number;
-      sellingPrice?: number;
-      stock?: number;
-      minStock?: number;
+      buyingPrice?: number | string;
+      sellingPrice?: number | string;
+      stock?: number | string;
+      minStock?: number | string;
       expiryDate?: string;
       batchNumber?: string;
     };
 
-  if (!name || !sellingPrice || sellingPrice < 0) {
+  const normalizedName = name?.trim();
+  const parsedBuyingPrice = toNumberInput(buyingPrice);
+  const parsedSellingPrice = toNumberInput(sellingPrice);
+  const parsedStock = toNumberInput(stock);
+  const parsedMinStock = toNumberInput(minStock);
+
+  if (!normalizedName || parsedSellingPrice === undefined || parsedSellingPrice < 0) {
     return NextResponse.json({ error: 'Name and valid selling price are required.' }, { status: 400 });
+  }
+
+  if (parsedBuyingPrice !== undefined && parsedBuyingPrice < 0) {
+    return NextResponse.json({ error: 'Buying price cannot be negative.' }, { status: 400 });
+  }
+
+  if (parsedStock !== undefined && parsedStock < 0) {
+    return NextResponse.json({ error: 'Stock cannot be negative.' }, { status: 400 });
+  }
+
+  if (parsedMinStock !== undefined && parsedMinStock < 0) {
+    return NextResponse.json({ error: 'Minimum stock cannot be negative.' }, { status: 400 });
   }
 
   const medicine = await prisma.medicine.create({
     data: {
       barcode: barcode?.trim() || undefined,
-      name: name.trim(),
+      name: normalizedName,
       category:
         (category as
           | 'Antibiotic'
@@ -56,14 +98,14 @@ export async function POST(request: NextRequest) {
           | 'ThroatSpray'
           | 'Other') || 'Other',
       unit: (unit as 'Strip' | 'Bottle' | 'Tube' | 'Vial' | 'Sachet' | 'Tablet' | 'Capsule') || 'Strip',
-      buyingPrice: buyingPrice ?? 0,
-      sellingPrice,
-      stock: stock ?? 0,
-      minStock: minStock ?? 10,
+      buyingPrice: parsedBuyingPrice ?? 0,
+      sellingPrice: parsedSellingPrice,
+      stock: parsedStock ?? 0,
+      minStock: parsedMinStock ?? 10,
       expiryDate: expiryDate ? new Date(expiryDate) : undefined,
       batchNumber: batchNumber?.trim() || undefined,
     },
   });
 
-  return NextResponse.json(medicine, { status: 201 });
+  return NextResponse.json(toMedicinePayload(medicine), { status: 201 });
 }

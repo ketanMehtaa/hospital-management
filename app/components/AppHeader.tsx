@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/patients', label: 'Patients' },
   { href: '/medicines', label: 'Medicines' },
+  { href: '/bills', label: 'Bills' },
 ];
 
 export default function AppHeader() {

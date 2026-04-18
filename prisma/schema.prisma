@@ -1,6 +1,3 @@
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
@@ -10,19 +7,12 @@ datasource db {
   provider = "postgresql"
 }
 
-// ========================
-// ENUMS (full words)
-// ========================
+/* ================= ENUMS ================= */
 
 enum Gender {
   Male
   Female
   Other
-}
-
-enum PatientType {
-  fresh
-  followup
 }
 
 enum MedicineCategory {
@@ -32,9 +22,9 @@ enum MedicineCategory {
   Steroid
   Analgesic
   Antifungal
-  EarDrop        // displayed as "Ear Drop"
-  NasalSpray     // displayed as "Nasal Spray"
-  ThroatSpray    // displayed as "Throat Spray"
+  EarDrop
+  NasalSpray
+  ThroatSpray
   Other
 }
 
@@ -58,97 +48,112 @@ enum BillCategory {
   Pathology
 }
 
-// ========================
-// MODELS
-// ========================
+/* ================= PATIENT ================= */
 
-// Patient – core information
 model Patient {
-  id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(255)
-  age         Int?
-  gender      Gender?
-  phone       String?     @db.VarChar(20)
-  address     String?     @db.Text
-  diagnosis   String?     @db.Text       // chief complaint
-  notes       String?     @db.Text
-  visitDate   DateTime    @map("visit_date") @db.Date
-  visitTime   String?     @map("visit_time") @db.VarChar(10)
-  patientType PatientType @default(fresh) @map("patient_type")
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  age       Int
+  gender    Gender
+  phone     String?  @unique @db.VarChar(15)
+  address   String?  @db.Text
+  diagnosis String?  @db.Text
 
-  bills       Bill[]
+  // ✅ merged date + time
+  visitAt   DateTime
 
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  bills     Bill[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? // ✅ soft delete
 
   @@index([name])
   @@index([phone])
   @@map("patients")
 }
 
-// Medicine inventory
+/* ================= MEDICINE ================= */
+
 model Medicine {
-  id          Int             @id @default(autoincrement())
-  barcode     String?         @unique @db.VarChar(100)
-  name        String          @db.VarChar(255)
-  category    MedicineCategory @default(Other)
-  unit        MedicineUnit     @default(Strip)
-  buyingPrice Float?          @map("buying_price") @default(0)
-  sellingPrice Float          @map("selling_price")
-  stock       Float           @default(0)
-  minStock    Float           @map("min_stock") @default(10)
-  expiryDate  DateTime?       @map("expiry_date") @db.Date
-  batchNumber String?         @map("batch_number") @db.VarChar(100)
+  id           String           @id @default(uuid()) @db.Uuid
+  barcode      String?          @unique @db.VarChar(100)
+  name         String           @db.VarChar(255)
+  category     MedicineCategory @default(Other)
+  unit         MedicineUnit     @default(Strip)
 
-  billItems   BillItem[]
+  // ❗ FIXED: Decimal instead of Float
+  buyingPrice  Decimal? @map("buying_price") @db.Decimal(10,2)
+  sellingPrice Decimal  @map("selling_price") @db.Decimal(10,2)
 
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  // ❗ FIXED: Decimal stock
+  stock        Decimal  @default(0) @db.Decimal(10,2)
+  minStock     Decimal  @map("min_stock") @default(10) @db.Decimal(10,2)
+
+  expiryDate   DateTime?        @map("expiry_date") @db.Date
+  batchNumber  String?          @map("batch_number") @db.VarChar(100)
+
+  billItems BillItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? // ✅ soft delete
 
   @@index([name])
   @@index([barcode])
+  @@index([expiryDate])
   @@map("medicines")
 }
 
-// Bill header – one bill per patient visit (or walk-in)
+/* ================= BILL ================= */
+
 model Bill {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(uuid()) @db.Uuid
   billNumber  String   @unique @map("bill_number") @db.VarChar(50)
-  patientId   Int?     @map("patient_id")
-  patientName String   @map("patient_name") @db.VarChar(255) // denormalised for speed
-  phone       String?  @db.VarChar(20)
-  billDate    DateTime @map("bill_date") @db.Date
-  billTime    String?  @map("bill_time") @db.VarChar(10)
-  discount    Float    @default(0)
-  totalAmount Float    @map("total_amount") @default(0)
 
-  patient     Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  items       BillItem[]
+  patientId   String?  @map("patient_id") @db.Uuid
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  // ✅ snapshot (intentional, renamed for clarity)
+  patientName String   @map("patient_name") @db.VarChar(255)
+  phone       String?  @db.VarChar(15)
+
+  // ✅ merged date + time
+  billAt      DateTime @map("bill_at")
+
+  // ❗ FIXED: Decimal
+  discount    Decimal  @default(0) @db.Decimal(10,2)
+  totalAmount Decimal  @map("total_amount") @db.Decimal(10,2)
+
+  patient Patient?  @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  items   BillItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? // ✅ soft delete
 
   @@index([patientId])
-  @@index([billDate])
+  @@index([billAt])
   @@index([billNumber])
   @@map("bills")
 }
 
-// Bill line item – unified structure for any service or product
+/* ================= BILL ITEM ================= */
+
 model BillItem {
-  id          Int          @id @default(autoincrement())
-  billId      Int          @map("bill_id")
-  category    BillCategory // OpdConsultation, Medicine, Endoscopy, etc.
-  description String       @db.VarChar(255) // e.g., "First Visit Consultation", "Paracetamol"
-  quantity    Float        @default(1)
-  unitPrice   Float        @map("unit_price") // price per unit
-  amount      Float        // quantity * unitPrice
+  id          String       @id @default(uuid()) @db.Uuid
+  billId      String       @map("bill_id") @db.Uuid
+  category    BillCategory
+  description String       @db.VarChar(255)
 
-  // Optional link to medicine (only when category = Medicine)
-  medicineId  Int?         @map("medicine_id")
-  medicine    Medicine?    @relation(fields: [medicineId], references: [id], onDelete: SetNull)
+  // ❗ FIXED: Decimal
+  quantity    Decimal      @default(1) @db.Decimal(10,2)
+  unitPrice   Decimal      @map("unit_price") @db.Decimal(10,2)
+  amount      Decimal      @db.Decimal(10,2)
 
-  bill        Bill         @relation(fields: [billId], references: [id], onDelete: Cascade)
+  medicineId String?   @map("medicine_id") @db.Uuid
+  medicine   Medicine? @relation(fields: [medicineId], references: [id], onDelete: SetNull)
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
 
   @@index([billId])
   @@index([medicineId])

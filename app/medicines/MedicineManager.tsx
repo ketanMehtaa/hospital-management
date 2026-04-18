@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 
 type MedicinePayload = {
-  id: number;
+  id: string;
   barcode: string | null;
   name: string;
   category: string;
@@ -157,7 +157,7 @@ export default function MedicineManager() {
           </div>
         </div>
 
-        <form className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2 text-sm text-zinc-700">
@@ -214,7 +214,9 @@ export default function MedicineManager() {
               <label className="space-y-2 text-sm text-zinc-700">
                 Selling price*
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">Rs. </span>
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                    Rs.{' '}
+                  </span>
                   <input
                     className={`${inputClass} pl-9`}
                     type="number"
@@ -229,7 +231,9 @@ export default function MedicineManager() {
               <label className="space-y-2 text-sm text-zinc-700">
                 Buying price
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">Rs. </span>
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                    Rs.{' '}
+                  </span>
                   <input
                     className={`${inputClass} pl-9`}
                     type="number"
@@ -249,7 +253,7 @@ export default function MedicineManager() {
                   className={inputClass}
                   type="number"
                   min="0"
-                  step="1"
+                  step="0.01"
                   value={form.stock}
                   onChange={(event) => handleChange('stock', event.target.value)}
                 />
@@ -260,7 +264,7 @@ export default function MedicineManager() {
                   className={inputClass}
                   type="number"
                   min="0"
-                  step="1"
+                  step="0.01"
                   value={form.minStock}
                   onChange={(event) => handleChange('minStock', event.target.value)}
                 />
@@ -285,28 +289,6 @@ export default function MedicineManager() {
                   onChange={(event) => handleChange('batchNumber', event.target.value)}
                 />
               </label>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-6">
-            <h3 className="text-lg font-semibold text-zinc-950">Quick inventory summary</h3>
-            <p className="mt-4 text-sm leading-6 text-zinc-600">
-              Use this form to keep inventory data up to date and track stock levels for each medicine.
-            </p>
-
-            <div className="mt-6 space-y-4">
-              <div className="rounded-3xl bg-white p-4 shadow-sm shadow-zinc-200/20">
-                <p className="text-sm text-zinc-500">New item</p>
-                <p className="mt-2 text-2xl font-semibold text-zinc-950">{form.name || 'Untitled'}</p>
-              </div>
-              <div className="rounded-3xl bg-white p-4 shadow-sm shadow-zinc-200/20">
-                <p className="text-sm text-zinc-500">Class</p>
-                <p className="mt-2 text-lg font-semibold text-zinc-950">{form.category}</p>
-              </div>
-              <div className="rounded-3xl bg-white p-4 shadow-sm shadow-zinc-200/20">
-                <p className="text-sm text-zinc-500">Unit</p>
-                <p className="mt-2 text-lg font-semibold text-zinc-950">{form.unit}</p>
-              </div>
             </div>
 
             <button

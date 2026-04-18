@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Hospital Management',
-  description: 'Patient and medicine management dashboard',
+  description: 'Patient, medicine, and billing management dashboard',
 };
 
 export default function RootLayout({
