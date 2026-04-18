@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
   const fromStr = searchParams.get('from') ?? todayStr;
   const toStr   = searchParams.get('to')   ?? todayStr;
 
-  const from = new Date(`${fromStr}T00:00:00`);
-  const to   = new Date(`${toStr}T23:59:59.999`);
+  const from = new Date(`${fromStr}T00:00:00+05:30`);
+  const to   = new Date(`${toStr}T23:59:59.999+05:30`);
 
   // ── Fetch bills in range ───────────────────────────────────────────────────
   const bills = await prisma.bill.findMany({

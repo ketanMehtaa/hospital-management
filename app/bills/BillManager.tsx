@@ -624,10 +624,12 @@ export default function BillManager() {
       if (isEdit) {
         setBills((cur) => cur.map((b) => (b.id === saved.id ? saved : b)));
         setSuccess('Bill updated successfully.');
+        void fetchMedicines(); // Bug #16: refresh stock shown in medicine dropdown
         setEditingId(null);
       } else {
         setBills((cur) => [saved, ...cur]);
         setSuccess('Bill created successfully.');
+        void fetchMedicines(); // Bug #16: refresh stock shown in medicine dropdown
       }
       setForm(createInitialFormState());
       setPatientQuery('');

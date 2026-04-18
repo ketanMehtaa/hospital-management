@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/app/generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
+﻿import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@/app/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error('DATABASE_URL must be defined in the environment.');
+if (!databaseUrl) throw new Error("DATABASE_URL must be defined in the environment.");
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),
@@ -18,32 +18,31 @@ const includeItems = {
   },
 } as const;
 
-export async function GET(_req: NextRequest, ctx: RouteContext<'/api/bills/[id]'>) {
+export async function GET(_req: NextRequest, ctx: RouteContext<"/api/bills/[id]">) {
   const { id } = await ctx.params;
   try {
     const bill = await prisma.bill.findFirst({ where: { id, deletedAt: null }, include: includeItems });
-    if (!bill) return NextResponse.json({ error: 'Bill not found.' }, { status: 404 });
+    if (!bill) return NextResponse.json({ error: "Bill not found." }, { status: 404 });
     return NextResponse.json(bill);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed.' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed." }, { status: 500 });
   }
 }
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/bills/[id]'>) {
+export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/[id]">) {
   const { id } = await ctx.params;
 
   try {
-    // ── Fetch existing bill with medicine items so we can return stock ─────────
     const existing = await prisma.bill.findFirst({
       where: { id, deletedAt: null },
       include: {
         items: {
-          where: { category: 'Medicine' },
+          where: { category: "Medicine" },
           select: { medicineId: true, batchId: true, quantity: true },
         },
       },
     });
-    if (!existing) return NextResponse.json({ error: 'Bill not found.' }, { status: 404 });
+    if (!existing) return NextResponse.json({ error: "Bill not found." }, { status: 404 });
 
     const body = await request.json();
     const { patientId, patientName, phone, billAt, discount, paidCash, paidOnline, items } =
@@ -64,13 +63,12 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/bills/
         }>;
       };
 
-    if (!patientName?.trim()) return NextResponse.json({ error: 'Patient name is required.' }, { status: 400 });
-    if (!items || items.length === 0) return NextResponse.json({ error: 'No items provided.' }, { status: 400 });
+    if (!patientName?.trim()) return NextResponse.json({ error: "Patient name is required." }, { status: 400 });
+    if (!items || items.length === 0) return NextResponse.json({ error: "No items provided." }, { status: 400 });
 
     const subtotal    = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
     const totalAmount = Math.max(0, subtotal - (discount ?? 0));
 
-    // ── Payment validation ─────────────────────────────────────────────────────
     const paidSum = (paidCash ?? 0) + (paidOnline ?? 0);
     if (Math.abs(paidSum - totalAmount) > 0.01) {
       return NextResponse.json(
@@ -79,8 +77,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/bills/
       );
     }
 
-    // ── Step 1: Return stock from OLD medicine items back to their batches ─────
-    // Return to the exact batches they were taken from (batchId recorded on item)
+    // Step 1: Return stock from OLD medicine items to their recorded batches.
+    // Single-batch-per-item constraint ensures batchId is the only batch deducted from.
     const returnOps: ReturnType<typeof prisma.medicineBatch.update>[] = [];
     for (const oldItem of existing.items) {
       if (!oldItem.batchId) continue;
@@ -92,85 +90,112 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/bills/
       );
     }
 
-    // ── Step 2: FEFO deduction for NEW medicine items ──────────────────────────
+    // Step 2: FEFO deduction for NEW medicine items — aggregated per medicineId.
+    // Bug #5: one stock check per medicine prevents oversell from same snapshot.
+    // Bug #3: carry expiryDate+createdAt and sort correctly (FEFO, nulls last).
+    // Bug #4: single batch per group so batchId == the only deducted batch.
     type DeductOp = ReturnType<typeof prisma.medicineBatch.update>;
     const deductOps: DeductOp[] = [];
     const itemBatchIds: (string | null)[] = items.map(() => null);
 
+    type MedicineNeed = { indices: number[]; totalQty: number };
+    const medicineNeeds = new Map<string, MedicineNeed>();
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
-      if (item.category !== 'Medicine' || !item.medicineId) continue;
+      if (item.category !== "Medicine" || !item.medicineId) continue;
+      const need = medicineNeeds.get(item.medicineId) ?? { indices: [], totalQty: 0 };
+      need.indices.push(idx);
+      need.totalQty += item.quantity;
+      medicineNeeds.set(item.medicineId, need);
+    }
 
-      // Execute returns first inside a mini-transaction so we see restored stock
-      // We resolve batches AFTER returns are applied (we do it all in $transaction)
-      // Instead: load batches from DB first, add back old quantities in-memory
+    for (const [medId, { indices, totalQty }] of medicineNeeds.entries()) {
       const batches = await prisma.medicineBatch.findMany({
         where: {
-          medicineId: item.medicineId,
+          medicineId: medId,
           quantity:   { gt: 0 },
           OR: [{ expiryDate: null }, { expiryDate: { gte: new Date() } }],
         },
-        orderBy: [{ expiryDate: 'asc' }, { createdAt: 'asc' }],
+        orderBy: [{ expiryDate: "asc" }, { createdAt: "asc" }],
       });
 
-      // Add back quantities from old items that share the same batchId
-      const adjustedBatches = batches.map((b) => {
-        const returned = existing.items
+      type AdjustedBatch = { id: string; quantity: number; expiryDate: Date | null; createdAt: Date };
+      const adjustedBatches: AdjustedBatch[] = batches.map((b) => ({
+        id:         b.id,
+        quantity:   Number(b.quantity) + existing.items
           .filter((oi) => oi.batchId === b.id)
-          .reduce((s, oi) => s + Number(oi.quantity), 0);
-        return { id: b.id, quantity: Number(b.quantity) + returned };
-      });
+          .reduce((s, oi) => s + Number(oi.quantity), 0),
+        expiryDate: b.expiryDate,
+        createdAt:  b.createdAt,
+      }));
 
-      // Also include batches that were fully depleted (quantity = 0) but will be restored
       const depletedBatchIds = existing.items
-        .filter((oi) => oi.medicineId === item.medicineId && oi.batchId)
+        .filter((oi) => oi.medicineId === medId && oi.batchId)
         .map((oi) => oi.batchId!)
         .filter((bid) => !adjustedBatches.find((b) => b.id === bid));
 
       if (depletedBatchIds.length > 0) {
-        const depletedBatches = await prisma.medicineBatch.findMany({
+        const depletedRows = await prisma.medicineBatch.findMany({
           where: { id: { in: depletedBatchIds } },
-          orderBy: [{ expiryDate: 'asc' }, { createdAt: 'asc' }],
         });
-        for (const db of depletedBatches) {
+        for (const db of depletedRows) {
           const returned = existing.items
             .filter((oi) => oi.batchId === db.id)
             .reduce((s, oi) => s + Number(oi.quantity), 0);
-          if (returned > 0) adjustedBatches.push({ id: db.id, quantity: returned });
+          if (returned > 0) {
+            adjustedBatches.push({ id: db.id, quantity: returned, expiryDate: db.expiryDate, createdAt: db.createdAt });
+          }
         }
-        adjustedBatches.sort((a, b) => a.id.localeCompare(b.id)); // stable sort
       }
 
-      let remaining = item.quantity;
-      if (adjustedBatches.length === 0 && remaining > 0) {
-        const med = await prisma.medicine.findUnique({ where: { id: item.medicineId }, select: { name: true } });
-        return NextResponse.json({ error: `No stock for ${med?.name ?? item.description}.` }, { status: 409 });
-      }
-
-      itemBatchIds[idx] = adjustedBatches[0]?.id ?? null;
-
-      for (const batch of adjustedBatches) {
-        if (remaining <= 0) break;
-        const use = Math.min(remaining, batch.quantity);
-        deductOps.push(
-          prisma.medicineBatch.update({
-            where: { id: batch.id },
-            data:  { quantity: { decrement: use } },
-          }),
+      // Bug #3 fix: sort by expiryDate ASC (nulls last) then createdAt ASC.
+      adjustedBatches.sort((a, b) => {
+        if (!a.expiryDate && !b.expiryDate) return a.createdAt.getTime() - b.createdAt.getTime();
+        if (!a.expiryDate) return 1;
+        if (!b.expiryDate) return -1;
+        return (
+          a.expiryDate.getTime() - b.expiryDate.getTime() ||
+          a.createdAt.getTime()  - b.createdAt.getTime()
         );
-        remaining -= use;
+      });
+
+      if (adjustedBatches.length === 0) {
+        const med = await prisma.medicine.findUnique({ where: { id: medId }, select: { name: true } });
+        return NextResponse.json({ error: `No stock for ${med?.name ?? medId}.` }, { status: 409 });
       }
 
-      if (remaining > 0) {
-        const med = await prisma.medicine.findUnique({ where: { id: item.medicineId }, select: { name: true } });
+      // Bug #4 fix: require a single batch to cover the combined qty.
+      const primaryBatch = adjustedBatches.find(b => b.quantity >= totalQty);
+      if (!primaryBatch) {
+        const totalAvailable = adjustedBatches.reduce((s, b) => s + b.quantity, 0);
+        const med = await prisma.medicine.findUnique({ where: { id: medId }, select: { name: true } });
+        if (totalAvailable < totalQty) {
+          return NextResponse.json(
+            { error: `Insufficient stock for ${med?.name ?? medId}. Needed: ${totalQty}, available: ${totalAvailable}.` },
+            { status: 409 },
+          );
+        }
         return NextResponse.json(
-          { error: `Insufficient stock for ${med?.name ?? item.description}.` },
+          {
+            error: `No single batch covers ${totalQty} unit(s) of ${med?.name ?? medId}. ` +
+              `Please split the item into smaller quantities or restock a batch.`,
+          },
           { status: 409 },
         );
       }
+
+      for (const idx of indices) {
+        itemBatchIds[idx] = primaryBatch.id;
+      }
+      deductOps.push(
+        prisma.medicineBatch.update({
+          where: { id: primaryBatch.id },
+          data:  { quantity: { decrement: totalQty } },
+        }),
+      );
     }
 
-    // ── Step 3: Atomic transaction ─────────────────────────────────────────────
+    // Step 3: Atomic transaction
     const [updated] = await prisma.$transaction([
       prisma.bill.update({
         where: { id },
@@ -184,7 +209,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/bills/
           paidCash:     paidCash  ?? 0,
           paidOnline:   paidOnline ?? 0,
           items: {
-            deleteMany: {},   // wipe old items
+            deleteMany: {},
             create: items.map((item, idx) => ({
               category:    item.category as any,
               description: item.description,
@@ -204,7 +229,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/bills/
 
     return NextResponse.json(updated);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not update bill.';
+    const message = error instanceof Error ? error.message : "Could not update bill.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

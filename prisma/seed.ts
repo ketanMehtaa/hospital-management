@@ -1,4 +1,4 @@
-/**
+﻿/**
  * prisma/seed.ts
  * Seeds the database with realistic test data:
  *   - 60 medicines across all categories
@@ -9,6 +9,7 @@
  */
 
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '../app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -266,7 +267,7 @@ async function main() {
     for (let b = 0; b < numBills; b++) {
       billIndex++;
       const billAt = randomDate(90);
-      const billNumber = `BILL-${String(billIndex).padStart(5, '0')}`;
+      const billNumber = randomUUID();
 
       const items: {
         category: string;

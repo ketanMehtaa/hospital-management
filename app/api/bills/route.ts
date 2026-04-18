@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/app/generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
+﻿import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@/app/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error('DATABASE_URL must be defined in the environment.');
+if (!databaseUrl) throw new Error("DATABASE_URL must be defined in the environment.");
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),
@@ -49,12 +49,11 @@ export async function GET() {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
-
     return NextResponse.json(bills);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to fetch bills.';
+    const message = error instanceof Error ? error.message : "Failed to fetch bills.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -79,15 +78,14 @@ export async function POST(request: NextRequest) {
       }>;
     };
 
-    // ── Bill number ───────────────────────────────────────────────────────────
-    const billCount = await prisma.bill.count();
-    const billNumber = `BILL-${String(billCount + 1).padStart(4, '0')}`;
+    // Bill number: UUID, collision-free regardless of soft-deletes (Bug #1 fix)
+    const billNumber = crypto.randomUUID();
 
-    // ── Totals ────────────────────────────────────────────────────────────────
+    // Totals
     const subtotal    = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
     const totalAmount = Math.max(0, subtotal - discount);
 
-    // ── Payment validation ────────────────────────────────────────────────────
+    // Payment validation
     const paidSum = (paidCash ?? 0) + (paidOnline ?? 0);
     if (Math.abs(paidSum - totalAmount) > 0.01) {
       return NextResponse.json(
@@ -96,30 +94,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── FEFO batch resolution ─────────────────────────────────────────────────
-    // Build a map: medicineId → total qty requested (same medicine may appear multiple times)
-    const medicineItems = items.filter((i) => i.category === 'Medicine' && i.medicineId);
-
-    // For each medicine item we need to pick batches in FEFO order.
-    // We build a flat deduction plan: { batchId, reduceBy }[]
-    // and also resolve which batchId to record on the BillItem.
+    // FEFO batch resolution - aggregated per medicineId, single batch per group.
+    // Bug #5 fix: aggregate all items for the same medicine before any stock check
+    // so independent reads of the same DB snapshot cannot each "see" full stock.
+    // Bug #4 fix: require one batch to cover the full combined qty so
+    // BillItem.batchId is always the SOLE batch deducted from, making returns accurate.
+    type MedicineNeed = { indices: number[]; totalQty: number };
+    const medicineNeeds = new Map<string, MedicineNeed>();
+    for (let idx = 0; idx < items.length; idx++) {
+      const item = items[idx];
+      if (item.category !== "Medicine" || !item.medicineId) continue;
+      const need = medicineNeeds.get(item.medicineId) ?? { indices: [], totalQty: 0 };
+      need.indices.push(idx);
+      need.totalQty += item.quantity;
+      medicineNeeds.set(item.medicineId, need);
+    }
 
     type DeductionOp = { batchId: string; reduceBy: number };
     const deductions: DeductionOp[] = [];
-
-    // medicineItemBatchId[i] = batchId chosen for items[i] (single-batch FEFO pick for UI)
     const itemBatchIds: (string | null)[] = items.map(() => null);
 
-    for (let idx = 0; idx < items.length; idx++) {
-      const item = items[idx];
-      if (item.category !== 'Medicine' || !item.medicineId) continue;
-
-      let remaining = item.quantity;
-
-      // Fetch non-expired, in-stock batches ordered by expiryDate ASC (FEFO)
+    for (const [medId, { indices, totalQty }] of medicineNeeds.entries()) {
       const batches = await prisma.medicineBatch.findMany({
         where: {
-          medicineId: item.medicineId,
+          medicineId: medId,
           quantity:   { gt: 0 },
           OR: [
             { expiryDate: null },
@@ -127,39 +125,46 @@ export async function POST(request: NextRequest) {
           ],
         },
         orderBy: [
-          { expiryDate: 'asc' },
-          { createdAt:  'asc' },
+          { expiryDate: "asc" },
+          { createdAt:  "asc" },
         ],
       });
 
       if (batches.length === 0) {
-        const med = await prisma.medicine.findUnique({ where: { id: item.medicineId }, select: { name: true } });
+        const med = await prisma.medicine.findUnique({ where: { id: medId }, select: { name: true } });
         return NextResponse.json(
-          { error: `No stock available for ${med?.name ?? item.description}. Please restock first.` },
+          { error: `No stock available for ${med?.name ?? medId}. Please restock first.` },
           { status: 409 },
         );
       }
 
-      // Record the first-used batch as the item's batchId (for audit)
-      itemBatchIds[idx] = batches[0].id;
-
-      for (const batch of batches) {
-        if (remaining <= 0) break;
-        const use = Math.min(remaining, Number(batch.quantity));
-        deductions.push({ batchId: batch.id, reduceBy: use });
-        remaining -= use;
-      }
-
-      if (remaining > 0) {
-        const med = await prisma.medicine.findUnique({ where: { id: item.medicineId }, select: { name: true } });
+      const primaryBatch = batches.find(b => Number(b.quantity) >= totalQty);
+      if (!primaryBatch) {
+        const totalAvailable = batches.reduce((s, b) => s + Number(b.quantity), 0);
+        const med = await prisma.medicine.findUnique({ where: { id: medId }, select: { name: true } });
+        if (totalAvailable < totalQty) {
+          return NextResponse.json(
+            { error: `Insufficient stock for ${med?.name ?? medId}. Requested: ${totalQty}, available: ${totalAvailable}. Please restock.` },
+            { status: 409 },
+          );
+        }
         return NextResponse.json(
-          { error: `Insufficient stock for ${med?.name ?? item.description}. Requested: ${item.quantity}, available: ${item.quantity - remaining}.` },
+          {
+            error: `No single batch has ${totalQty} unit(s) of ${med?.name ?? medId}. ` +
+              `The earliest-expiring batch (${batches[0].batchNumber ?? "no batch #"}) has ${Number(batches[0].quantity)} unit(s). ` +
+              `Please reduce the quantity, split into separate line-items, or restock a batch.`,
+          },
           { status: 409 },
         );
       }
+
+      for (const idx of indices) {
+        itemBatchIds[idx] = primaryBatch.id;
+      }
+      deductions.push({ batchId: primaryBatch.id, reduceBy: totalQty });
     }
 
-    // ── Atomic: deduct batches + create bill ──────────────────────────────────
+    // Atomic: deduct batches + create bill
     const batchDecrements = deductions.map((op) =>
       prisma.medicineBatch.update({
         where: { id: op.batchId },
@@ -205,7 +210,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(bill, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not create bill.';
+    const message = error instanceof Error ? error.message : "Could not create bill.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
