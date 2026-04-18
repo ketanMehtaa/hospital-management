@@ -98,3 +98,32 @@ prisma/
   migrations/    → Migration history
   seed.ts        → Test data seeder
 ```
+
+
+
+## 💾 Database Backup & Restore
+
+Since the application uses a Dockerized PostgreSQL database, you can safely create and restore backups directly through the active container without needing any local PostgreSQL installations.
+
+### 1. Create a Backup
+This generates a compressed database dump and extracts it to a local `backups/` folder.
+
+```bash
+# 1. Generate the backup file inside the container
+docker exec -t hospital-management-db-1 pg_dump -U postgres -d hospital -F c -f /tmp/hospital.dump
+
+# 2. Extract it to your local system (create the folder if necessary)
+mkdir -p backups
+docker cp hospital-management-db-1:/tmp/hospital.dump backups/hospital.dump
+```
+
+### 2. Restore from a Backup
+> **⚠️ Warning:** The restore command uses the `-c` flag which drops existing database tables before restoring. Current data will be fully overwritten.
+
+```bash
+# 1. Copy the local backup file into the running container
+docker cp backups/hospital.dump hospital-management-db-1:/tmp/hospital.dump
+
+# 2. Execute the restore process
+docker exec -t hospital-management-db-1 pg_restore -U postgres -d hospital -c /tmp/hospital.dump
+```
