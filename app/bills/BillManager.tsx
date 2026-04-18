@@ -283,6 +283,21 @@ export default function BillManager() {
     [form.paidCash, form.paidOnline],
   );
 
+  // ── Auto-fill missing amount to Online ──────────────────────────────────────
+  useEffect(() => {
+    const cashVal = parseFloat(form.paidCash) || 0;
+    const remaining = Math.max(0, total - cashVal);
+    
+    // Check if what's already in the form matches the remaining value to prevent loops
+    const currentOnline = parseFloat(form.paidOnline) || 0;
+    if (Math.abs(currentOnline - remaining) > 0.01) {
+      setForm((cur) => ({
+        ...cur,
+        paidOnline: remaining > 0 ? remaining.toFixed(2) : '',
+      }));
+    }
+  }, [total, form.paidCash]);
+
   // ── Edit helpers ────────────────────────────────────────────────────────────
 
   const startEdit = (bill: BillPayload) => {
