@@ -12,7 +12,8 @@
     "vercel-build": "prisma migrate deploy && next build",
     "db:deploy": "prisma migrate deploy && prisma generate",
     "db:seed": "tsx prisma/seed.ts",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
@@ -39,6 +40,7 @@
     "prettier": "^3.8.3",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "husky": "^8.0.0"
   }
 }
