@@ -20,13 +20,13 @@ export default function AppHeader() {
     return pathname.startsWith(href);
   };
 
-
-
   return (
     <header className="sticky top-0 z-50 rounded-b-3xl border border-t-0 border-zinc-200 bg-white/80 px-4 py-3 shadow-sm shadow-zinc-200/20 backdrop-blur-md sm:px-5 sm:py-3.5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-500">Hospital Management</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-500">
+            Hospital Management
+          </p>
         </div>
 
         <nav aria-label="Primary" className="flex flex-wrap gap-2">

@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@/app/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaPg } from '@prisma/adapter-pg';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { PrismaClient } from '@/app/generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL must be defined in the environment.");
+if (!databaseUrl) throw new Error('DATABASE_URL must be defined in the environment.');
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),
@@ -39,7 +40,7 @@ type BillItemPayload = {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const limitStr = searchParams.get("limit");
+  const limitStr = searchParams.get('limit');
   const limit = limitStr ? parseInt(limitStr, 10) : undefined;
 
   try {
@@ -54,11 +55,11 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(bills);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch bills.";
+    const message = error instanceof Error ? error.message : 'Failed to fetch bills.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -66,49 +67,54 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { patientId, patientName, phone, billAt, discount, paidCash, paidOnline, items } = body as {
-      patientId?: string;
-      patientName: string;
-      phone?: string;
-      billAt: string;
-      discount: number;
-      paidCash: number;
-      paidOnline: number;
-      items: Array<{
-        category: string;
-        description: string;
-        quantity: number;
-        unitPrice: number;
-        medicineId?: string;
-      }>;
-    };
+    const { patientId, patientName, phone, billAt, discount, paidCash, paidOnline, items } =
+      body as {
+        patientId?: string;
+        patientName: string;
+        phone?: string;
+        billAt: string;
+        discount: number;
+        paidCash: number;
+        paidOnline: number;
+        items: Array<{
+          category: string;
+          description: string;
+          quantity: number;
+          unitPrice: number;
+          medicineId?: string;
+        }>;
+      };
 
     // Bill number: UUID, collision-free regardless of soft-deletes (Bug #1 fix)
     const billNumber = crypto.randomUUID();
 
     // Totals
-    const subtotal    = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+    const subtotal = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
     const totalAmount = Math.max(0, subtotal - discount);
 
     // Payment validation
     const paidSum = (paidCash ?? 0) + (paidOnline ?? 0);
     if (Math.abs(paidSum - totalAmount) > 0.01) {
       return NextResponse.json(
-        { error: `Payment mismatch: Cash + Online (Rs. ${paidSum.toFixed(2)}) must equal the bill total (Rs. ${totalAmount.toFixed(2)}).` },
+        {
+          error: `Payment mismatch: Cash + Online (Rs. ${paidSum.toFixed(2)}) must equal the bill total (Rs. ${totalAmount.toFixed(2)}).`,
+        },
         { status: 400 },
       );
     }
 
     const bill = await prisma.$transaction(async (tx) => {
       const finalItems = [];
-      const medIds = Array.from(new Set(items.map((i) => i.medicineId).filter(Boolean))) as string[];
+      const medIds = Array.from(
+        new Set(items.map((i) => i.medicineId).filter(Boolean)),
+      ) as string[];
 
       const allBatches = await tx.medicineBatch.findMany({
         where: {
           medicineId: { in: medIds },
           quantity: { gt: 0 },
         },
-        orderBy: [{ expiryDate: "asc" }, { createdAt: "asc" }],
+        orderBy: [{ expiryDate: 'asc' }, { createdAt: 'asc' }],
       });
 
       const inventory = new Map<string, typeof allBatches>();
@@ -120,7 +126,7 @@ export async function POST(request: NextRequest) {
       const deductOps = new Map<string, number>();
 
       for (const item of items) {
-        if (item.category !== "Medicine" || !item.medicineId) {
+        if (item.category !== 'Medicine' || !item.medicineId) {
           finalItems.push({
             category: item.category as any,
             description: item.description,
@@ -141,7 +147,7 @@ export async function POST(request: NextRequest) {
           if (remaining <= 0) break;
           const deductedSoFar = deductOps.get(b.id) ?? 0;
           const available = Number(b.quantity) - deductedSoFar;
-          
+
           if (available <= 0) continue;
 
           if (b.expiryDate && new Date(b.expiryDate) < now) {
@@ -168,9 +174,13 @@ export async function POST(request: NextRequest) {
         if (remaining > 0) {
           const mName = item.description || item.medicineId;
           if (expiredAvailable > 0 && expiredAvailable >= remaining) {
-            throw new Error(`Cannot add ${mName}. The remaining active stock is insufficient because ${expiredAvailable} unit(s) are expired.`);
+            throw new Error(
+              `Cannot add ${mName}. The remaining active stock is insufficient because ${expiredAvailable} unit(s) are expired.`,
+            );
           }
-          throw new Error(`Insufficient stock for ${mName}. Short by ${remaining} unit(s)${expiredAvailable > 0 ? ` (and ${expiredAvailable} unit(s) are expired)` : ''}.`);
+          throw new Error(
+            `Insufficient stock for ${mName}. Short by ${remaining} unit(s)${expiredAvailable > 0 ? ` (and ${expiredAvailable} unit(s) are expired)` : ''}.`,
+          );
         }
       }
 
@@ -207,9 +217,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(bill, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not create bill.";
+    const message = error instanceof Error ? error.message : 'Could not create bill.';
     // Map custom insufficient stock errors to 409
-    const status = message.includes("Insufficient stock") ? 409 : 500;
+    const status = message.includes('Insufficient stock') ? 409 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

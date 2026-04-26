@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 services:
   db:
@@ -9,9 +9,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - '5432:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d hospital"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d hospital']
       interval: 5s
       timeout: 3s
       retries: 20
@@ -30,7 +30,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/hospital?schema=public
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - '3000:3000'
     command: sh -c "pnpm db:deploy && pnpm start"
 
 volumes:

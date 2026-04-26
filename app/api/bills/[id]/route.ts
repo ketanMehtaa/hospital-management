@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@/app/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaPg } from '@prisma/adapter-pg';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { PrismaClient } from '@/app/generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL must be defined in the environment.");
+if (!databaseUrl) throw new Error('DATABASE_URL must be defined in the environment.');
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),
@@ -13,23 +14,29 @@ const includeItems = {
   items: {
     include: {
       medicine: { select: { id: true, name: true } },
-      batch:    { select: { id: true, batchNumber: true } },
+      batch: { select: { id: true, batchNumber: true } },
     },
   },
 } as const;
 
-export async function GET(_req: NextRequest, ctx: RouteContext<"/api/bills/[id]">) {
+export async function GET(_req: NextRequest, ctx: RouteContext<'/api/bills/[id]'>) {
   const { id } = await ctx.params;
   try {
-    const bill = await prisma.bill.findFirst({ where: { id, deletedAt: null }, include: includeItems });
-    if (!bill) return NextResponse.json({ error: "Bill not found." }, { status: 404 });
+    const bill = await prisma.bill.findFirst({
+      where: { id, deletedAt: null },
+      include: includeItems,
+    });
+    if (!bill) return NextResponse.json({ error: 'Bill not found.' }, { status: 404 });
     return NextResponse.json(bill);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed." }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed.' },
+      { status: 500 },
+    );
   }
 }
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/[id]">) {
+export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/bills/[id]'>) {
   const { id } = await ctx.params;
 
   try {
@@ -37,12 +44,12 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/
       where: { id, deletedAt: null },
       include: {
         items: {
-          where: { category: "Medicine" },
+          where: { category: 'Medicine' },
           select: { medicineId: true, batchId: true, quantity: true },
         },
       },
     });
-    if (!existing) return NextResponse.json({ error: "Bill not found." }, { status: 404 });
+    if (!existing) return NextResponse.json({ error: 'Bill not found.' }, { status: 404 });
 
     const body = await request.json();
     const { patientId, patientName, phone, billAt, discount, paidCash, paidOnline, items } =
@@ -63,16 +70,20 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/
         }>;
       };
 
-    if (!patientName?.trim()) return NextResponse.json({ error: "Patient name is required." }, { status: 400 });
-    if (!items || items.length === 0) return NextResponse.json({ error: "No items provided." }, { status: 400 });
+    if (!patientName?.trim())
+      return NextResponse.json({ error: 'Patient name is required.' }, { status: 400 });
+    if (!items || items.length === 0)
+      return NextResponse.json({ error: 'No items provided.' }, { status: 400 });
 
-    const subtotal    = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+    const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
     const totalAmount = Math.max(0, subtotal - (discount ?? 0));
 
     const paidSum = (paidCash ?? 0) + (paidOnline ?? 0);
     if (Math.abs(paidSum - totalAmount) > 0.01) {
       return NextResponse.json(
-        { error: `Payment mismatch: Cash + Online (Rs. ${paidSum.toFixed(2)}) must equal total (Rs. ${totalAmount.toFixed(2)}).` },
+        {
+          error: `Payment mismatch: Cash + Online (Rs. ${paidSum.toFixed(2)}) must equal total (Rs. ${totalAmount.toFixed(2)}).`,
+        },
         { status: 400 },
       );
     }
@@ -90,14 +101,16 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/
 
       // Step 2: FEFO deduction for NEW medicine items — split across batches
       const finalItems = [];
-      const medIds = Array.from(new Set(items.map((i) => i.medicineId).filter(Boolean))) as string[];
+      const medIds = Array.from(
+        new Set(items.map((i) => i.medicineId).filter(Boolean)),
+      ) as string[];
 
       const allBatches = await tx.medicineBatch.findMany({
         where: {
           medicineId: { in: medIds },
           quantity: { gt: 0 },
         },
-        orderBy: [{ expiryDate: "asc" }, { createdAt: "asc" }],
+        orderBy: [{ expiryDate: 'asc' }, { createdAt: 'asc' }],
       });
 
       const inventory = new Map<string, typeof allBatches>();
@@ -109,7 +122,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/
       const deductOps = new Map<string, number>();
 
       for (const item of items) {
-        if (item.category !== "Medicine" || !item.medicineId) {
+        if (item.category !== 'Medicine' || !item.medicineId) {
           finalItems.push({
             category: item.category as any,
             description: item.description,
@@ -130,7 +143,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/
           if (remaining <= 0) break;
           const deductedSoFar = deductOps.get(b.id) ?? 0;
           const available = Number(b.quantity) - deductedSoFar;
-          
+
           if (available <= 0) continue;
 
           if (b.expiryDate && new Date(b.expiryDate) < now) {
@@ -157,9 +170,13 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/
         if (remaining > 0) {
           const mName = item.description || item.medicineId;
           if (expiredAvailable > 0 && expiredAvailable >= remaining) {
-            throw new Error(`Cannot add ${mName}. The remaining active stock is insufficient because ${expiredAvailable} unit(s) are expired.`);
+            throw new Error(
+              `Cannot add ${mName}. The remaining active stock is insufficient because ${expiredAvailable} unit(s) are expired.`,
+            );
           }
-          throw new Error(`Insufficient stock for ${mName}. Short by ${remaining} unit(s)${expiredAvailable > 0 ? ` (and ${expiredAvailable} unit(s) are expired)` : ''}.`);
+          throw new Error(
+            `Insufficient stock for ${mName}. Short by ${remaining} unit(s)${expiredAvailable > 0 ? ` (and ${expiredAvailable} unit(s) are expired)` : ''}.`,
+          );
         }
       }
 
@@ -193,8 +210,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bills/
 
     return NextResponse.json(updated);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not update bill.";
-    const status = message.includes("Insufficient stock") ? 409 : 500;
+    const message = error instanceof Error ? error.message : 'Could not update bill.';
+    const status = message.includes('Insufficient stock') ? 409 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

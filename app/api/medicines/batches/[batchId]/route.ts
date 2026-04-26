@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { PrismaClient } from '@/app/generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL must be defined.');
@@ -32,12 +33,13 @@ export async function PATCH(
   const batch = await prisma.medicineBatch.findUnique({ where: { id: batchId } });
   if (!batch) return NextResponse.json({ error: 'Batch not found.' }, { status: 404 });
 
-  const body = await request.json() as Record<string, unknown>;
+  const body = (await request.json()) as Record<string, unknown>;
 
-  const quantity      = toNum(body['quantity']);
+  const quantity = toNum(body['quantity']);
   const purchasePrice = toNum(body['purchasePrice']);
-  const batchNumber   = typeof body['batchNumber']   === 'string' ? body['batchNumber'].trim() || null  : undefined;
-  const expiryDate    = typeof body['expiryDate']    === 'string' ? body['expiryDate']                  : undefined;
+  const batchNumber =
+    typeof body['batchNumber'] === 'string' ? body['batchNumber'].trim() || null : undefined;
+  const expiryDate = typeof body['expiryDate'] === 'string' ? body['expiryDate'] : undefined;
 
   if (quantity !== undefined && quantity < 0) {
     return NextResponse.json({ error: 'Quantity cannot be negative.' }, { status: 400 });
@@ -46,20 +48,20 @@ export async function PATCH(
   const updated = await prisma.medicineBatch.update({
     where: { id: batchId },
     data: {
-      ...(batchNumber   !== undefined               ? { batchNumber }                              : {}),
-      ...(expiryDate    !== undefined               ? { expiryDate: expiryDate ? new Date(expiryDate) : null } : {}),
-      ...(quantity      !== undefined               ? { quantity }                                 : {}),
-      ...(purchasePrice !== undefined               ? { purchasePrice }                            : {}),
+      ...(batchNumber !== undefined ? { batchNumber } : {}),
+      ...(expiryDate !== undefined ? { expiryDate: expiryDate ? new Date(expiryDate) : null } : {}),
+      ...(quantity !== undefined ? { quantity } : {}),
+      ...(purchasePrice !== undefined ? { purchasePrice } : {}),
     },
   });
 
   return NextResponse.json({
-    id:            updated.id,
-    batchNumber:   updated.batchNumber,
-    expiryDate:    updated.expiryDate,
-    quantity:      Number(updated.quantity),
+    id: updated.id,
+    batchNumber: updated.batchNumber,
+    expiryDate: updated.expiryDate,
+    quantity: Number(updated.quantity),
     purchasePrice: updated.purchasePrice === null ? null : Number(updated.purchasePrice),
-    createdAt:     updated.createdAt,
+    createdAt: updated.createdAt,
   });
 }
 
@@ -78,7 +80,9 @@ export async function DELETE(
 
   if (Number(batch.quantity) > 0) {
     return NextResponse.json(
-      { error: `Cannot delete a batch with remaining stock (${Number(batch.quantity)} units). Zero out the quantity first.` },
+      {
+        error: `Cannot delete a batch with remaining stock (${Number(batch.quantity)} units). Zero out the quantity first.`,
+      },
       { status: 409 },
     );
   }

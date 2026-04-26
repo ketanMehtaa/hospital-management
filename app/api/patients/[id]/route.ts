@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { PrismaClient } from '@/app/generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -44,17 +45,18 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
     }
 
     const body = await request.json();
-    const { name, age, gender, phone, address, diagnosis, visitAt, visitDate, visitTime } = body as {
-      name?: string;
-      age?: number;
-      gender?: string;
-      phone?: string;
-      address?: string;
-      diagnosis?: string;
-      visitAt?: string;
-      visitDate?: string;
-      visitTime?: string;
-    };
+    const { name, age, gender, phone, address, diagnosis, visitAt, visitDate, visitTime } =
+      body as {
+        name?: string;
+        age?: number;
+        gender?: string;
+        phone?: string;
+        address?: string;
+        diagnosis?: string;
+        visitAt?: string;
+        visitDate?: string;
+        visitTime?: string;
+      };
 
     // ── Validate required fields ──────────────────────────────────────────────
     const normalizedName = name?.trim();
@@ -63,12 +65,18 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
     }
 
     if (age === undefined || age === null || typeof age !== 'number') {
-      return NextResponse.json({ error: 'Age must be a number between 0 and 110.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Age must be a number between 0 and 110.' },
+        { status: 400 },
+      );
     }
 
     const normalizedAge = Math.trunc(age);
     if (normalizedAge < 0 || normalizedAge > 110) {
-      return NextResponse.json({ error: 'Age must be an integer between 0 and 110.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Age must be an integer between 0 and 110.' },
+        { status: 400 },
+      );
     }
 
     const normalizedGender =
@@ -77,13 +85,19 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
         : undefined;
 
     if (!normalizedGender) {
-      return NextResponse.json({ error: 'Gender must be Male, Female, or Other.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Gender must be Male, Female, or Other.' },
+        { status: 400 },
+      );
     }
 
     // ── Phone ─────────────────────────────────────────────────────────────────
     const normalizedPhone = phone?.replace(/\D/g, '') ?? '';
     if (!normalizedPhone || normalizedPhone.length !== 10) {
-      return NextResponse.json({ error: 'Phone number must be exactly 10 digits.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Phone number must be exactly 10 digits.' },
+        { status: 400 },
+      );
     }
 
     // If phone changed, check uniqueness
@@ -102,7 +116,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
 
     // ── Visit datetime ────────────────────────────────────────────────────────
     const fallbackVisitTime = visitTime?.trim() || new Date().toTimeString().slice(0, 5);
-    const visitDateTimeInput = visitAt?.trim() || (visitDate ? `${visitDate}T${fallbackVisitTime}:00` : '');
+    const visitDateTimeInput =
+      visitAt?.trim() || (visitDate ? `${visitDate}T${fallbackVisitTime}:00` : '');
     const parsedVisitAt = new Date(visitDateTimeInput);
     if (!visitDateTimeInput || Number.isNaN(parsedVisitAt.getTime())) {
       return NextResponse.json({ error: 'Visit date and time must be valid.' }, { status: 400 });

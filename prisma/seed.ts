@@ -9,9 +9,12 @@
  */
 
 import 'dotenv/config';
+
 import { randomUUID } from 'node:crypto';
-import { PrismaClient } from '../app/generated/prisma/client';
+
 import { PrismaPg } from '@prisma/adapter-pg';
+
+import { PrismaClient } from '../app/generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is not set in .env');
@@ -22,8 +25,7 @@ const prisma = new PrismaClient({
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
 
-const rand = (min: number, max: number) =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
+const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const pick = <T>(arr: readonly T[]): T => arr[rand(0, arr.length - 1)];
 
@@ -41,37 +43,153 @@ const makePhone = (i: number) => `9${String(i).padStart(9, '0')}`;
 // ─── Static data ──────────────────────────────────────────────────────────────
 
 const FIRST_NAMES = [
-  'Aarav', 'Aditya', 'Akash', 'Amit', 'Ananya', 'Anita', 'Anjali', 'Arjun',
-  'Aryan', 'Deepak', 'Deepika', 'Divya', 'Gaurav', 'Geeta', 'Harish', 'Heena',
-  'Ishaan', 'Jaya', 'Karan', 'Kavita', 'Kishore', 'Komal', 'Kunal', 'Lakshmi',
-  'Manish', 'Manisha', 'Meera', 'Mohit', 'Monika', 'Mukesh', 'Nandini', 'Neha',
-  'Nikhil', 'Nisha', 'Payal', 'Pooja', 'Pradeep', 'Priya', 'Rahul', 'Rajesh',
-  'Ramesh', 'Rashmi', 'Ravi', 'Rekha', 'Rohit', 'Sachin', 'Sanjay', 'Sangeeta',
-  'Seema', 'Shashi', 'Shreya', 'Shweta', 'Siddharth', 'Simran', 'Sneha', 'Soni',
-  'Suresh', 'Swati', 'Tanvi', 'Usha', 'Varun', 'Vijay', 'Vikram', 'Vikas',
-  'Vineeta', 'Vishal', 'Yasmin', 'Yash',
+  'Aarav',
+  'Aditya',
+  'Akash',
+  'Amit',
+  'Ananya',
+  'Anita',
+  'Anjali',
+  'Arjun',
+  'Aryan',
+  'Deepak',
+  'Deepika',
+  'Divya',
+  'Gaurav',
+  'Geeta',
+  'Harish',
+  'Heena',
+  'Ishaan',
+  'Jaya',
+  'Karan',
+  'Kavita',
+  'Kishore',
+  'Komal',
+  'Kunal',
+  'Lakshmi',
+  'Manish',
+  'Manisha',
+  'Meera',
+  'Mohit',
+  'Monika',
+  'Mukesh',
+  'Nandini',
+  'Neha',
+  'Nikhil',
+  'Nisha',
+  'Payal',
+  'Pooja',
+  'Pradeep',
+  'Priya',
+  'Rahul',
+  'Rajesh',
+  'Ramesh',
+  'Rashmi',
+  'Ravi',
+  'Rekha',
+  'Rohit',
+  'Sachin',
+  'Sanjay',
+  'Sangeeta',
+  'Seema',
+  'Shashi',
+  'Shreya',
+  'Shweta',
+  'Siddharth',
+  'Simran',
+  'Sneha',
+  'Soni',
+  'Suresh',
+  'Swati',
+  'Tanvi',
+  'Usha',
+  'Varun',
+  'Vijay',
+  'Vikram',
+  'Vikas',
+  'Vineeta',
+  'Vishal',
+  'Yasmin',
+  'Yash',
 ];
 
 const LAST_NAMES = [
-  'Agarwal', 'Bhatt', 'Chauhan', 'Chowdhury', 'Das', 'Desai', 'Deshpande',
-  'Gandhi', 'Ghosh', 'Gupta', 'Jain', 'Joshi', 'Kapoor', 'Khan', 'Kumar',
-  'Malhotra', 'Mehta', 'Mishra', 'Nair', 'Pandey', 'Patel', 'Patil', 'Pillai',
-  'Rao', 'Reddy', 'Saxena', 'Shah', 'Sharma', 'Shukla', 'Singh', 'Srivastava',
-  'Tiwari', 'Trivedi', 'Varma', 'Yadav',
+  'Agarwal',
+  'Bhatt',
+  'Chauhan',
+  'Chowdhury',
+  'Das',
+  'Desai',
+  'Deshpande',
+  'Gandhi',
+  'Ghosh',
+  'Gupta',
+  'Jain',
+  'Joshi',
+  'Kapoor',
+  'Khan',
+  'Kumar',
+  'Malhotra',
+  'Mehta',
+  'Mishra',
+  'Nair',
+  'Pandey',
+  'Patel',
+  'Patil',
+  'Pillai',
+  'Rao',
+  'Reddy',
+  'Saxena',
+  'Shah',
+  'Sharma',
+  'Shukla',
+  'Singh',
+  'Srivastava',
+  'Tiwari',
+  'Trivedi',
+  'Varma',
+  'Yadav',
 ];
 
 const CITIES = [
-  'Mumbai', 'Delhi', 'Bengaluru', 'Chennai', 'Hyderabad', 'Pune', 'Ahmedabad',
-  'Kolkata', 'Jaipur', 'Lucknow', 'Bhopal', 'Indore', 'Nagpur', 'Surat', 'Vadodara',
+  'Mumbai',
+  'Delhi',
+  'Bengaluru',
+  'Chennai',
+  'Hyderabad',
+  'Pune',
+  'Ahmedabad',
+  'Kolkata',
+  'Jaipur',
+  'Lucknow',
+  'Bhopal',
+  'Indore',
+  'Nagpur',
+  'Surat',
+  'Vadodara',
 ];
 
 const DIAGNOSES = [
-  'Acute sinusitis', 'Allergic rhinitis', 'Bronchitis', 'Chronic tonsillitis',
-  'Common cold', 'Deviated nasal septum', 'Ear infection (otitis media)',
-  'Epistaxis', 'Foreign body - ear', 'Gastroesophageal reflux disease',
-  'Hearing loss - sensorineural', 'Laryngitis', 'Meniere\'s disease',
-  'Nasal polyps', 'Otosclerosis', 'Pharyngitis', 'Sleep apnea',
-  'Tinnitus', 'Tympanic membrane perforation', 'Vertigo',
+  'Acute sinusitis',
+  'Allergic rhinitis',
+  'Bronchitis',
+  'Chronic tonsillitis',
+  'Common cold',
+  'Deviated nasal septum',
+  'Ear infection (otitis media)',
+  'Epistaxis',
+  'Foreign body - ear',
+  'Gastroesophageal reflux disease',
+  'Hearing loss - sensorineural',
+  'Laryngitis',
+  "Meniere's disease",
+  'Nasal polyps',
+  'Otosclerosis',
+  'Pharyngitis',
+  'Sleep apnea',
+  'Tinnitus',
+  'Tympanic membrane perforation',
+  'Vertigo',
 ];
 
 const GENDERS = ['Male', 'Female', 'Other'] as const;
@@ -84,83 +202,434 @@ type MedSeed = {
   unit: string;
   buying: number;
   selling: number;
-  stockA: number;   // Batch A qty (older, expires sooner)
-  stockB: number;   // Batch B qty (newer, longer shelf life)
+  stockA: number; // Batch A qty (older, expires sooner)
+  stockB: number; // Batch B qty (newer, longer shelf life)
   minStock: number;
 };
 
 const MEDICINES: MedSeed[] = [
   // Antibiotic
-  { name: 'Amoxicillin 500mg',         category: 'Antibiotic',     unit: 'Strip',   buying: 40,  selling: 60,  stockA: 80,  stockB: 120, minStock: 20 },
-  { name: 'Azithromycin 250mg',         category: 'Antibiotic',     unit: 'Strip',   buying: 55,  selling: 80,  stockA: 60,  stockB: 90,  minStock: 20 },
-  { name: 'Augmentin 625mg',            category: 'Antibiotic',     unit: 'Strip',   buying: 90,  selling: 130, stockA: 50,  stockB: 70,  minStock: 15 },
-  { name: 'Ciprofloxacin 500mg',        category: 'Antibiotic',     unit: 'Strip',   buying: 30,  selling: 50,  stockA: 70,  stockB: 110, minStock: 20 },
-  { name: 'Doxycycline 100mg',          category: 'Antibiotic',     unit: 'Capsule', buying: 20,  selling: 35,  stockA: 80,  stockB: 120, minStock: 20 },
-  { name: 'Metronidazole 400mg',        category: 'Antibiotic',     unit: 'Strip',   buying: 15,  selling: 25,  stockA: 100, stockB: 150, minStock: 25 },
+  {
+    name: 'Amoxicillin 500mg',
+    category: 'Antibiotic',
+    unit: 'Strip',
+    buying: 40,
+    selling: 60,
+    stockA: 80,
+    stockB: 120,
+    minStock: 20,
+  },
+  {
+    name: 'Azithromycin 250mg',
+    category: 'Antibiotic',
+    unit: 'Strip',
+    buying: 55,
+    selling: 80,
+    stockA: 60,
+    stockB: 90,
+    minStock: 20,
+  },
+  {
+    name: 'Augmentin 625mg',
+    category: 'Antibiotic',
+    unit: 'Strip',
+    buying: 90,
+    selling: 130,
+    stockA: 50,
+    stockB: 70,
+    minStock: 15,
+  },
+  {
+    name: 'Ciprofloxacin 500mg',
+    category: 'Antibiotic',
+    unit: 'Strip',
+    buying: 30,
+    selling: 50,
+    stockA: 70,
+    stockB: 110,
+    minStock: 20,
+  },
+  {
+    name: 'Doxycycline 100mg',
+    category: 'Antibiotic',
+    unit: 'Capsule',
+    buying: 20,
+    selling: 35,
+    stockA: 80,
+    stockB: 120,
+    minStock: 20,
+  },
+  {
+    name: 'Metronidazole 400mg',
+    category: 'Antibiotic',
+    unit: 'Strip',
+    buying: 15,
+    selling: 25,
+    stockA: 100,
+    stockB: 150,
+    minStock: 25,
+  },
   // Antihistamine
-  { name: 'Cetirizine 10mg',            category: 'Antihistamine',  unit: 'Strip',   buying: 10,  selling: 18,  stockA: 200, stockB: 300, minStock: 50 },
-  { name: 'Fexofenadine 120mg',         category: 'Antihistamine',  unit: 'Strip',   buying: 25,  selling: 40,  stockA: 120, stockB: 180, minStock: 30 },
-  { name: 'Loratadine 10mg',            category: 'Antihistamine',  unit: 'Strip',   buying: 12,  selling: 20,  stockA: 160, stockB: 240, minStock: 40 },
-  { name: 'Montelukast 10mg',           category: 'Antihistamine',  unit: 'Strip',   buying: 35,  selling: 55,  stockA: 100, stockB: 150, minStock: 25 },
+  {
+    name: 'Cetirizine 10mg',
+    category: 'Antihistamine',
+    unit: 'Strip',
+    buying: 10,
+    selling: 18,
+    stockA: 200,
+    stockB: 300,
+    minStock: 50,
+  },
+  {
+    name: 'Fexofenadine 120mg',
+    category: 'Antihistamine',
+    unit: 'Strip',
+    buying: 25,
+    selling: 40,
+    stockA: 120,
+    stockB: 180,
+    minStock: 30,
+  },
+  {
+    name: 'Loratadine 10mg',
+    category: 'Antihistamine',
+    unit: 'Strip',
+    buying: 12,
+    selling: 20,
+    stockA: 160,
+    stockB: 240,
+    minStock: 40,
+  },
+  {
+    name: 'Montelukast 10mg',
+    category: 'Antihistamine',
+    unit: 'Strip',
+    buying: 35,
+    selling: 55,
+    stockA: 100,
+    stockB: 150,
+    minStock: 25,
+  },
   // Decongestant
-  { name: 'Pseudoephedrine 60mg',       category: 'Decongestant',   unit: 'Strip',   buying: 18,  selling: 30,  stockA: 120, stockB: 180, minStock: 30 },
-  { name: 'Xylometazoline Drops',       category: 'Decongestant',   unit: 'Bottle',  buying: 35,  selling: 55,  stockA: 80,  stockB: 120, minStock: 20 },
-  { name: 'Oxymetazoline Nasal',        category: 'Decongestant',   unit: 'Bottle',  buying: 40,  selling: 65,  stockA: 72,  stockB: 108, minStock: 20 },
+  {
+    name: 'Pseudoephedrine 60mg',
+    category: 'Decongestant',
+    unit: 'Strip',
+    buying: 18,
+    selling: 30,
+    stockA: 120,
+    stockB: 180,
+    minStock: 30,
+  },
+  {
+    name: 'Xylometazoline Drops',
+    category: 'Decongestant',
+    unit: 'Bottle',
+    buying: 35,
+    selling: 55,
+    stockA: 80,
+    stockB: 120,
+    minStock: 20,
+  },
+  {
+    name: 'Oxymetazoline Nasal',
+    category: 'Decongestant',
+    unit: 'Bottle',
+    buying: 40,
+    selling: 65,
+    stockA: 72,
+    stockB: 108,
+    minStock: 20,
+  },
   // Steroid
-  { name: 'Betamethasone 0.5mg',        category: 'Steroid',        unit: 'Strip',   buying: 20,  selling: 35,  stockA: 140, stockB: 210, minStock: 35 },
-  { name: 'Dexamethasone 4mg',          category: 'Steroid',        unit: 'Strip',   buying: 25,  selling: 45,  stockA: 120, stockB: 180, minStock: 30 },
-  { name: 'Prednisolone 5mg',           category: 'Steroid',        unit: 'Strip',   buying: 15,  selling: 28,  stockA: 160, stockB: 240, minStock: 40 },
-  { name: 'Fluticasone Nasal Spray',    category: 'Steroid',        unit: 'Bottle',  buying: 120, selling: 180, stockA: 60,  stockB: 90,  minStock: 15 },
+  {
+    name: 'Betamethasone 0.5mg',
+    category: 'Steroid',
+    unit: 'Strip',
+    buying: 20,
+    selling: 35,
+    stockA: 140,
+    stockB: 210,
+    minStock: 35,
+  },
+  {
+    name: 'Dexamethasone 4mg',
+    category: 'Steroid',
+    unit: 'Strip',
+    buying: 25,
+    selling: 45,
+    stockA: 120,
+    stockB: 180,
+    minStock: 30,
+  },
+  {
+    name: 'Prednisolone 5mg',
+    category: 'Steroid',
+    unit: 'Strip',
+    buying: 15,
+    selling: 28,
+    stockA: 160,
+    stockB: 240,
+    minStock: 40,
+  },
+  {
+    name: 'Fluticasone Nasal Spray',
+    category: 'Steroid',
+    unit: 'Bottle',
+    buying: 120,
+    selling: 180,
+    stockA: 60,
+    stockB: 90,
+    minStock: 15,
+  },
   // Analgesic
-  { name: 'Paracetamol 500mg',          category: 'Analgesic',      unit: 'Strip',   buying: 8,   selling: 15,  stockA: 320, stockB: 480, minStock: 80 },
-  { name: 'Ibuprofen 400mg',            category: 'Analgesic',      unit: 'Strip',   buying: 10,  selling: 18,  stockA: 240, stockB: 360, minStock: 60 },
-  { name: 'Diclofenac 50mg',            category: 'Analgesic',      unit: 'Strip',   buying: 12,  selling: 22,  stockA: 200, stockB: 300, minStock: 50 },
-  { name: 'Tramadol 50mg',              category: 'Analgesic',      unit: 'Capsule', buying: 18,  selling: 30,  stockA: 80,  stockB: 120, minStock: 20 },
+  {
+    name: 'Paracetamol 500mg',
+    category: 'Analgesic',
+    unit: 'Strip',
+    buying: 8,
+    selling: 15,
+    stockA: 320,
+    stockB: 480,
+    minStock: 80,
+  },
+  {
+    name: 'Ibuprofen 400mg',
+    category: 'Analgesic',
+    unit: 'Strip',
+    buying: 10,
+    selling: 18,
+    stockA: 240,
+    stockB: 360,
+    minStock: 60,
+  },
+  {
+    name: 'Diclofenac 50mg',
+    category: 'Analgesic',
+    unit: 'Strip',
+    buying: 12,
+    selling: 22,
+    stockA: 200,
+    stockB: 300,
+    minStock: 50,
+  },
+  {
+    name: 'Tramadol 50mg',
+    category: 'Analgesic',
+    unit: 'Capsule',
+    buying: 18,
+    selling: 30,
+    stockA: 80,
+    stockB: 120,
+    minStock: 20,
+  },
   // Antifungal
-  { name: 'Fluconazole 150mg',          category: 'Antifungal',     unit: 'Capsule', buying: 30,  selling: 50,  stockA: 80,  stockB: 120, minStock: 20 },
-  { name: 'Clotrimazole Cream',         category: 'Antifungal',     unit: 'Tube',    buying: 25,  selling: 40,  stockA: 60,  stockB: 90,  minStock: 15 },
-  { name: 'Ketoconazole Shampoo',       category: 'Antifungal',     unit: 'Bottle',  buying: 80,  selling: 120, stockA: 40,  stockB: 60,  minStock: 10 },
+  {
+    name: 'Fluconazole 150mg',
+    category: 'Antifungal',
+    unit: 'Capsule',
+    buying: 30,
+    selling: 50,
+    stockA: 80,
+    stockB: 120,
+    minStock: 20,
+  },
+  {
+    name: 'Clotrimazole Cream',
+    category: 'Antifungal',
+    unit: 'Tube',
+    buying: 25,
+    selling: 40,
+    stockA: 60,
+    stockB: 90,
+    minStock: 15,
+  },
+  {
+    name: 'Ketoconazole Shampoo',
+    category: 'Antifungal',
+    unit: 'Bottle',
+    buying: 80,
+    selling: 120,
+    stockA: 40,
+    stockB: 60,
+    minStock: 10,
+  },
   // Ear drops
-  { name: 'Ciprofloxacin Ear Drops',    category: 'EarDrop',        unit: 'Bottle',  buying: 45,  selling: 70,  stockA: 80,  stockB: 120, minStock: 20 },
-  { name: 'Clotrimazole Ear Drops',     category: 'EarDrop',        unit: 'Bottle',  buying: 40,  selling: 65,  stockA: 72,  stockB: 108, minStock: 18 },
-  { name: 'Waxsol Ear Drops',           category: 'EarDrop',        unit: 'Bottle',  buying: 55,  selling: 85,  stockA: 48,  stockB: 72,  minStock: 12 },
-  { name: 'Soliwax Ear Drops',          category: 'EarDrop',        unit: 'Bottle',  buying: 48,  selling: 75,  stockA: 52,  stockB: 78,  minStock: 13 },
+  {
+    name: 'Ciprofloxacin Ear Drops',
+    category: 'EarDrop',
+    unit: 'Bottle',
+    buying: 45,
+    selling: 70,
+    stockA: 80,
+    stockB: 120,
+    minStock: 20,
+  },
+  {
+    name: 'Clotrimazole Ear Drops',
+    category: 'EarDrop',
+    unit: 'Bottle',
+    buying: 40,
+    selling: 65,
+    stockA: 72,
+    stockB: 108,
+    minStock: 18,
+  },
+  {
+    name: 'Waxsol Ear Drops',
+    category: 'EarDrop',
+    unit: 'Bottle',
+    buying: 55,
+    selling: 85,
+    stockA: 48,
+    stockB: 72,
+    minStock: 12,
+  },
+  {
+    name: 'Soliwax Ear Drops',
+    category: 'EarDrop',
+    unit: 'Bottle',
+    buying: 48,
+    selling: 75,
+    stockA: 52,
+    stockB: 78,
+    minStock: 13,
+  },
   // Nasal spray
-  { name: 'Mometasone Nasal Spray',     category: 'NasalSpray',     unit: 'Bottle',  buying: 130, selling: 190, stockA: 40,  stockB: 60,  minStock: 10 },
-  { name: 'Budesonide Nasal Spray',     category: 'NasalSpray',     unit: 'Bottle',  buying: 110, selling: 165, stockA: 48,  stockB: 72,  minStock: 12 },
-  { name: 'Azelastine Nasal Spray',     category: 'NasalSpray',     unit: 'Bottle',  buying: 140, selling: 210, stockA: 36,  stockB: 54,  minStock: 10 },
-  { name: 'Saline Nasal Spray',         category: 'NasalSpray',     unit: 'Bottle',  buying: 30,  selling: 50,  stockA: 120, stockB: 180, minStock: 30 },
+  {
+    name: 'Mometasone Nasal Spray',
+    category: 'NasalSpray',
+    unit: 'Bottle',
+    buying: 130,
+    selling: 190,
+    stockA: 40,
+    stockB: 60,
+    minStock: 10,
+  },
+  {
+    name: 'Budesonide Nasal Spray',
+    category: 'NasalSpray',
+    unit: 'Bottle',
+    buying: 110,
+    selling: 165,
+    stockA: 48,
+    stockB: 72,
+    minStock: 12,
+  },
+  {
+    name: 'Azelastine Nasal Spray',
+    category: 'NasalSpray',
+    unit: 'Bottle',
+    buying: 140,
+    selling: 210,
+    stockA: 36,
+    stockB: 54,
+    minStock: 10,
+  },
+  {
+    name: 'Saline Nasal Spray',
+    category: 'NasalSpray',
+    unit: 'Bottle',
+    buying: 30,
+    selling: 50,
+    stockA: 120,
+    stockB: 180,
+    minStock: 30,
+  },
   // Throat spray
-  { name: 'Chlorhexidine Throat Spray', category: 'ThroatSpray',    unit: 'Bottle',  buying: 50,  selling: 80,  stockA: 48,  stockB: 72,  minStock: 12 },
-  { name: 'Benzocaine Throat Spray',    category: 'ThroatSpray',    unit: 'Bottle',  buying: 60,  selling: 95,  stockA: 40,  stockB: 60,  minStock: 10 },
+  {
+    name: 'Chlorhexidine Throat Spray',
+    category: 'ThroatSpray',
+    unit: 'Bottle',
+    buying: 50,
+    selling: 80,
+    stockA: 48,
+    stockB: 72,
+    minStock: 12,
+  },
+  {
+    name: 'Benzocaine Throat Spray',
+    category: 'ThroatSpray',
+    unit: 'Bottle',
+    buying: 60,
+    selling: 95,
+    stockA: 40,
+    stockB: 60,
+    minStock: 10,
+  },
   // Other
-  { name: 'Vitamin C 500mg',            category: 'Other',          unit: 'Strip',   buying: 15,  selling: 25,  stockA: 200, stockB: 300, minStock: 50 },
-  { name: 'Zinc Supplement',            category: 'Other',          unit: 'Strip',   buying: 18,  selling: 30,  stockA: 160, stockB: 240, minStock: 40 },
-  { name: 'ORS Sachet',                 category: 'Other',          unit: 'Sachet',  buying: 5,   selling: 10,  stockA: 240, stockB: 360, minStock: 60 },
-  { name: 'Antacid Tablet',             category: 'Other',          unit: 'Strip',   buying: 10,  selling: 18,  stockA: 200, stockB: 300, minStock: 50 },
-  { name: 'Probiotic Capsule',          category: 'Other',          unit: 'Capsule', buying: 40,  selling: 65,  stockA: 80,  stockB: 120, minStock: 20 },
+  {
+    name: 'Vitamin C 500mg',
+    category: 'Other',
+    unit: 'Strip',
+    buying: 15,
+    selling: 25,
+    stockA: 200,
+    stockB: 300,
+    minStock: 50,
+  },
+  {
+    name: 'Zinc Supplement',
+    category: 'Other',
+    unit: 'Strip',
+    buying: 18,
+    selling: 30,
+    stockA: 160,
+    stockB: 240,
+    minStock: 40,
+  },
+  {
+    name: 'ORS Sachet',
+    category: 'Other',
+    unit: 'Sachet',
+    buying: 5,
+    selling: 10,
+    stockA: 240,
+    stockB: 360,
+    minStock: 60,
+  },
+  {
+    name: 'Antacid Tablet',
+    category: 'Other',
+    unit: 'Strip',
+    buying: 10,
+    selling: 18,
+    stockA: 200,
+    stockB: 300,
+    minStock: 50,
+  },
+  {
+    name: 'Probiotic Capsule',
+    category: 'Other',
+    unit: 'Capsule',
+    buying: 40,
+    selling: 65,
+    stockA: 80,
+    stockB: 120,
+    minStock: 20,
+  },
 ];
 
 // ─── Bill category service prices ─────────────────────────────────────────────
 
 const SERVICE_ITEMS: { category: string; description: string; price: number }[] = [
-  { category: 'OpdConsultation', description: 'OPD Consultation',              price: 500  },
-  { category: 'OpdConsultation', description: 'Follow-up Consultation',        price: 300  },
-  { category: 'Endoscopy',       description: 'Flexible Nasopharyngoscopy',    price: 1200 },
-  { category: 'Endoscopy',       description: 'Rigid Laryngoscopy',            price: 1500 },
-  { category: 'Procedure',       description: 'Ear Wax Removal',               price: 400  },
-  { category: 'Procedure',       description: 'Nasal Cauterisation',           price: 800  },
-  { category: 'Procedure',       description: 'Foreign Body Removal - Ear',    price: 600  },
-  { category: 'Procedure',       description: 'Tympanometry',                  price: 700  },
-  { category: 'HearingTest',     description: 'Pure Tone Audiometry',          price: 500  },
-  { category: 'HearingTest',     description: 'BERA / ABR Test',               price: 2000 },
-  { category: 'HearingTest',     description: 'OAE Screening',                 price: 800  },
-  { category: 'Radiology',       description: 'X-ray PNS',                     price: 400  },
-  { category: 'Radiology',       description: 'CT Scan Sinuses',               price: 3500 },
-  { category: 'Radiology',       description: 'MRI Temporal Bone',             price: 5500 },
-  { category: 'Pathology',       description: 'CBC (Complete Blood Count)',     price: 350  },
-  { category: 'Pathology',       description: 'Culture & Sensitivity - Ear',   price: 600  },
-  { category: 'Pathology',       description: 'Throat Swab Culture',           price: 500  },
+  { category: 'OpdConsultation', description: 'OPD Consultation', price: 500 },
+  { category: 'OpdConsultation', description: 'Follow-up Consultation', price: 300 },
+  { category: 'Endoscopy', description: 'Flexible Nasopharyngoscopy', price: 1200 },
+  { category: 'Endoscopy', description: 'Rigid Laryngoscopy', price: 1500 },
+  { category: 'Procedure', description: 'Ear Wax Removal', price: 400 },
+  { category: 'Procedure', description: 'Nasal Cauterisation', price: 800 },
+  { category: 'Procedure', description: 'Foreign Body Removal - Ear', price: 600 },
+  { category: 'Procedure', description: 'Tympanometry', price: 700 },
+  { category: 'HearingTest', description: 'Pure Tone Audiometry', price: 500 },
+  { category: 'HearingTest', description: 'BERA / ABR Test', price: 2000 },
+  { category: 'HearingTest', description: 'OAE Screening', price: 800 },
+  { category: 'Radiology', description: 'X-ray PNS', price: 400 },
+  { category: 'Radiology', description: 'CT Scan Sinuses', price: 3500 },
+  { category: 'Radiology', description: 'MRI Temporal Bone', price: 5500 },
+  { category: 'Pathology', description: 'CBC (Complete Blood Count)', price: 350 },
+  { category: 'Pathology', description: 'Culture & Sensitivity - Ear', price: 600 },
+  { category: 'Pathology', description: 'Throat Swab Culture', price: 500 },
 ];
 
 // ─── Main seed ────────────────────────────────────────────────────────────────
@@ -183,22 +652,36 @@ async function main() {
     MEDICINES.map(async (m) => {
       const med = await prisma.medicine.create({
         data: {
-          name:         m.name,
-          category:     m.category as any,
-          unit:         m.unit as any,
-          buyingPrice:  m.buying,
+          name: m.name,
+          category: m.category as any,
+          unit: m.unit as any,
+          buyingPrice: m.buying,
           sellingPrice: m.selling,
-          minStock:     m.minStock,
+          minStock: m.minStock,
         },
       });
       // Batch A: expires in 3-6 months (FEFO will pick this first)
-      const expA = new Date(); expA.setMonth(expA.getMonth() + rand(3, 6));
+      const expA = new Date();
+      expA.setMonth(expA.getMonth() + rand(3, 6));
       // Batch B: expires in 18-36 months
-      const expB = new Date(); expB.setMonth(expB.getMonth() + rand(18, 36));
+      const expB = new Date();
+      expB.setMonth(expB.getMonth() + rand(18, 36));
       await prisma.medicineBatch.createMany({
         data: [
-          { medicineId: med.id, batchNumber: `BATCH-A-${rand(1000,9999)}`, expiryDate: expA, quantity: m.stockA, purchasePrice: m.buying },
-          { medicineId: med.id, batchNumber: `BATCH-B-${rand(1000,9999)}`, expiryDate: expB, quantity: m.stockB, purchasePrice: m.buying * 1.05 },
+          {
+            medicineId: med.id,
+            batchNumber: `BATCH-A-${rand(1000, 9999)}`,
+            expiryDate: expA,
+            quantity: m.stockA,
+            purchasePrice: m.buying,
+          },
+          {
+            medicineId: med.id,
+            batchNumber: `BATCH-B-${rand(1000, 9999)}`,
+            expiryDate: expB,
+            quantity: m.stockB,
+            purchasePrice: m.buying * 1.05,
+          },
         ],
       });
       // Return medicine with totalStock for tracking
@@ -207,20 +690,19 @@ async function main() {
   );
   console.log(`    Seeded ${medicines.length} medicines (${medicines.length * 2} batches).\n`);
 
-
   // ── 3. Seed patients ──────────────────────────────────────────────────────
   console.log('🧑‍⚕️  Seeding 1 000 patients...');
   const TOTAL_PATIENTS = 1000;
   const patientData = Array.from({ length: TOTAL_PATIENTS }, (_, i) => {
     const gender = pick(GENDERS);
     return {
-      name:      `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
-      age:       rand(5, 80),
-      gender:    gender as any,
-      phone:     makePhone(i + 1),
-      address:   `${rand(1, 999)}, ${pick(CITIES)}`,
+      name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+      age: rand(5, 80),
+      gender: gender as any,
+      phone: makePhone(i + 1),
+      address: `${rand(1, 999)}, ${pick(CITIES)}`,
       diagnosis: pick(DIAGNOSES),
-      visitAt:   randomDate(90),
+      visitAt: randomDate(90),
     };
   });
 
@@ -228,9 +710,7 @@ async function main() {
   const patients = [];
   for (let i = 0; i < patientData.length; i += 100) {
     const batch = patientData.slice(i, i + 100);
-    const created = await Promise.all(
-      batch.map((p) => prisma.patient.create({ data: p })),
-    );
+    const created = await Promise.all(batch.map((p) => prisma.patient.create({ data: p })));
     patients.push(...created);
     process.stdout.write(`\r    Progress: ${patients.length}/${TOTAL_PATIENTS}`);
   }
@@ -284,14 +764,22 @@ async function main() {
       items.push({
         category: 'OpdConsultation',
         description: consultFee === 500 ? 'OPD Consultation' : 'Follow-up Consultation',
-        quantity: 1, unitPrice: consultFee, amount: consultFee,
+        quantity: 1,
+        unitPrice: consultFee,
+        amount: consultFee,
       });
 
       // 0-2 random services
       const numServices = rand(0, 2);
       for (let s = 0; s < numServices; s++) {
         const svc = pick(SERVICE_ITEMS.filter((x) => x.category !== 'OpdConsultation'));
-        items.push({ category: svc.category, description: svc.description, quantity: 1, unitPrice: svc.price, amount: svc.price });
+        items.push({
+          category: svc.category,
+          description: svc.description,
+          quantity: 1,
+          unitPrice: svc.price,
+          amount: svc.price,
+        });
       }
 
       // 1-3 medicines (FEFO from in-memory tracker)
@@ -317,35 +805,43 @@ async function main() {
         if (qty < 1) continue;
         const price = med.sellingPrice;
         items.push({
-          category: 'Medicine', description: med.name,
-          quantity: qty, unitPrice: price, amount: qty * price,
-          medicineId: med.id, batchId: primaryBatchId,
+          category: 'Medicine',
+          description: med.name,
+          quantity: qty,
+          unitPrice: price,
+          amount: qty * price,
+          medicineId: med.id,
+          batchId: primaryBatchId,
         });
       }
 
-      const subtotal  = items.reduce((s, i) => s + i.amount, 0);
-      const discount  = rand(0, 1) === 0 ? 0 : rand(0, Math.floor(subtotal * 0.1));
-      const total     = Math.max(0, subtotal - discount);
+      const subtotal = items.reduce((s, i) => s + i.amount, 0);
+      const discount = rand(0, 1) === 0 ? 0 : rand(0, Math.floor(subtotal * 0.1));
+      const total = Math.max(0, subtotal - discount);
       const cashRatio = pick([0, 0.25, 0.5, 0.75, 1] as const);
-      const paidCash  = Math.round(total * cashRatio * 100) / 100;
+      const paidCash = Math.round(total * cashRatio * 100) / 100;
       const paidOnline = Math.round((total - paidCash) * 100) / 100;
 
       await prisma.bill.create({
         data: {
           billNumber,
-          patientId:   patient.id,
+          patientId: patient.id,
           patientName: patient.name,
-          phone:       patient.phone,
-          billAt, discount, totalAmount: total, paidCash, paidOnline,
+          phone: patient.phone,
+          billAt,
+          discount,
+          totalAmount: total,
+          paidCash,
+          paidOnline,
           items: {
             create: items.map((item) => ({
-              category:    item.category as any,
+              category: item.category as any,
               description: item.description,
-              quantity:    item.quantity,
-              unitPrice:   item.unitPrice,
-              amount:      item.amount,
-              medicineId:  item.medicineId,
-              batchId:     item.batchId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              amount: item.amount,
+              medicineId: item.medicineId,
+              batchId: item.batchId,
             })),
           },
         },
@@ -353,7 +849,8 @@ async function main() {
 
       totalBills++;
     }
-    if (patients.indexOf(patient) % 50 === 49) process.stdout.write(`\r    Bills created: ${totalBills}`);
+    if (patients.indexOf(patient) % 50 === 49)
+      process.stdout.write(`\r    Bills created: ${totalBills}`);
   }
 
   // Flush batch quantity updates to DB

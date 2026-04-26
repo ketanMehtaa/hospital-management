@@ -27,12 +27,12 @@ const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kol
 
 const CATEGORY_COLORS: Record<string, string> = {
   OpdConsultation: '#6366f1',
-  Medicine:        '#10b981',
-  Endoscopy:       '#f59e0b',
-  Procedure:       '#8b5cf6',
-  HearingTest:     '#06b6d4',
-  Radiology:       '#f43f5e',
-  Pathology:       '#84cc16',
+  Medicine: '#10b981',
+  Endoscopy: '#f59e0b',
+  Procedure: '#8b5cf6',
+  HearingTest: '#06b6d4',
+  Radiology: '#f43f5e',
+  Pathology: '#84cc16',
 };
 const colorFor = (cat: string, i: number) =>
   CATEGORY_COLORS[cat] ?? `hsl(${(i * 47) % 360},70%,55%)`;
@@ -43,7 +43,12 @@ function PinScreen({ onUnlock }: { onUnlock: () => void }) {
   const [pin, setPin] = useState('');
   const [shake, setShake] = useState(false);
   const [error, setError] = useState('');
-  const inputs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const inputs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
 
   const handleDigit = (idx: number, val: string) => {
     const digit = val.replace(/\D/, '').slice(-1);
@@ -83,8 +88,17 @@ function PinScreen({ onUnlock }: { onUnlock: () => void }) {
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-8">
       <div className="text-center">
         <div className="mb-3 inline-flex size-14 items-center justify-center rounded-2xl bg-zinc-950">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" className="size-7">
-            <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="white"
+            className="size-7"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
         <h2 className="text-2xl font-semibold text-zinc-950">Dashboard</h2>
@@ -111,7 +125,9 @@ function PinScreen({ onUnlock }: { onUnlock: () => void }) {
       </div>
 
       {error && (
-        <p className="rounded-2xl bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700">{error}</p>
+        <p className="rounded-2xl bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700">
+          {error}
+        </p>
       )}
 
       <style>{`
@@ -150,7 +166,10 @@ function drawBar(
 
   const values = data.map((d) => Number(d[valueKey]));
   const max = Math.max(...values, 1);
-  const pL = 60; const pR = 16; const pT = 20; const pB = 48;
+  const pL = 60;
+  const pR = 16;
+  const pT = 20;
+  const pB = 48;
   const cW = W - pL - pR;
   const cH = H - pT - pB;
   const barW = Math.min(48, (cW / data.length) * 0.55);
@@ -159,10 +178,16 @@ function drawBar(
   // Gridlines + y-axis labels
   for (let i = 0; i <= 4; i++) {
     const y = pT + cH - (cH * i) / 4;
-    ctx.strokeStyle = '#e4e4e7'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-    ctx.fillStyle = '#a1a1aa'; ctx.font = '11px system-ui'; ctx.textAlign = 'right';
-    ctx.fillText(fmt(max * i / 4).split('.')[0], pL - 6, y + 4);
+    ctx.strokeStyle = '#e4e4e7';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pL, y);
+    ctx.lineTo(W - pR, y);
+    ctx.stroke();
+    ctx.fillStyle = '#a1a1aa';
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'right';
+    ctx.fillText(fmt((max * i) / 4).split('.')[0], pL - 6, y + 4);
   }
 
   data.forEach((d, i) => {
@@ -171,10 +196,16 @@ function drawBar(
     const x = pL + i * gap + (gap - barW) / 2;
     const y = pT + cH - barH;
     ctx.fillStyle = colorFn(d, i);
-    ctx.beginPath(); ctx.roundRect(x, y, barW, Math.max(barH, 2), 5); ctx.fill();
-    const label = String(d[labelKey]).replace(/([A-Z])/g, ' $1').trim();
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, Math.max(barH, 2), 5);
+    ctx.fill();
+    const label = String(d[labelKey])
+      .replace(/([A-Z])/g, ' $1')
+      .trim();
     const short = label.length > 9 ? label.slice(0, 8) + '…' : label;
-    ctx.fillStyle = '#71717a'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#71717a';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'center';
     ctx.fillText(short, x + barW / 2, H - pB + 16);
   });
 }
@@ -195,23 +226,32 @@ function drawLine(
   ctx.clearRect(0, 0, W, H);
 
   const maxV = Math.max(...data.map((d) => d.revenue), 1);
-  const pL = 62; const pR = 16; const pT = 20; const pB = 48;
+  const pL = 62;
+  const pR = 16;
+  const pT = 20;
+  const pB = 48;
   const cW = W - pL - pR;
   const cH = H - pT - pB;
 
   // Grid
   for (let i = 0; i <= 4; i++) {
     const y = pT + cH - (cH * i) / 4;
-    ctx.strokeStyle = '#e4e4e7'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-    ctx.fillStyle = '#a1a1aa'; ctx.font = '11px system-ui'; ctx.textAlign = 'right';
-    ctx.fillText(fmt(maxV * i / 4).split('.')[0], pL - 6, y + 4);
+    ctx.strokeStyle = '#e4e4e7';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pL, y);
+    ctx.lineTo(W - pR, y);
+    ctx.stroke();
+    ctx.fillStyle = '#a1a1aa';
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'right';
+    ctx.fillText(fmt((maxV * i) / 4).split('.')[0], pL - 6, y + 4);
   }
 
   const series: { key: 'revenue' | 'cash' | 'online'; color: string }[] = [
     { key: 'revenue', color: '#6366f1' },
-    { key: 'cash',    color: '#10b981' },
-    { key: 'online',  color: '#3b82f6' },
+    { key: 'cash', color: '#10b981' },
+    { key: 'online', color: '#3b82f6' },
   ];
 
   series.forEach(({ key, color }) => {
@@ -240,7 +280,9 @@ function drawLine(
   data.forEach((d, i) => {
     if (data.length <= 10 || i % Math.ceil(data.length / 8) === 0) {
       const x = pL + (i / Math.max(data.length - 1, 1)) * cW;
-      ctx.fillStyle = '#71717a'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#71717a';
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'center';
       ctx.fillText(d.date.slice(5), x, H - pB + 16);
     }
   });
@@ -279,7 +321,11 @@ function BarChart({
 
 // ─── Line chart ───────────────────────────────────────────────────────────────
 
-function LineChart({ data }: { data: { date: string; revenue: number; cash: number; online: number }[] }) {
+function LineChart({
+  data,
+}: {
+  data: { date: string; revenue: number; cash: number; online: number }[];
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -297,9 +343,18 @@ function LineChart({ data }: { data: { date: string; revenue: number; cash: numb
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
       </div>
       <div className="flex flex-wrap gap-5 text-xs text-zinc-500">
-        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-6 rounded bg-indigo-500" />Revenue</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-6 rounded bg-emerald-500" />Cash</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-6 rounded bg-blue-500" />Online</span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-0.5 w-6 rounded bg-indigo-500" />
+          Revenue
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-0.5 w-6 rounded bg-emerald-500" />
+          Cash
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-0.5 w-6 rounded bg-blue-500" />
+          Online
+        </span>
       </div>
     </div>
   );
@@ -307,7 +362,17 @@ function LineChart({ data }: { data: { date: string; revenue: number; cash: numb
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
-function Stat({ label, value, sub, color = 'zinc' }: { label: string; value: string; sub?: string; color?: string }) {
+function Stat({
+  label,
+  value,
+  sub,
+  color = 'zinc',
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  color?: string;
+}) {
   const bg: Record<string, string> = {
     zinc: 'bg-zinc-50 border-zinc-200',
     green: 'bg-emerald-50 border-emerald-100',
@@ -342,7 +407,8 @@ export default function DashboardPage() {
   const [to, setTo] = useState(today());
   const [mode, setMode] = useState<'today' | 'range'>('today');
 
-  const inputCls = 'rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
+  const inputCls =
+    'rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-950 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
 
   const fetchData = async (f: string, t: string) => {
     setLoading(true);
@@ -350,7 +416,7 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/dashboard?from=${f}&to=${t}`);
       if (!res.ok) throw new Error('Failed to load dashboard data.');
-      setData(await res.json() as DashboardData);
+      setData((await res.json()) as DashboardData);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
@@ -375,7 +441,9 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Analytics</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+            Analytics
+          </p>
           <h2 className="mt-1 text-2xl font-semibold text-zinc-950">Dashboard</h2>
         </div>
 
@@ -442,13 +510,31 @@ export default function DashboardPage() {
           {/* ── KPI cards ─────────────────────────────────────────────── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="Total revenue" value={`Rs. ${fmt(data.totalRevenue)}`} color="zinc" />
-            <Stat label="Cash collected" value={`Rs. ${fmt(data.totalCash)}`} sub={`${data.totalRevenue > 0 ? ((data.totalCash / data.totalRevenue) * 100).toFixed(1) : 0}% of total`} color="green" />
-            <Stat label="Online collected" value={`Rs. ${fmt(data.totalOnline)}`} sub={`${data.totalRevenue > 0 ? ((data.totalOnline / data.totalRevenue) * 100).toFixed(1) : 0}% of total`} color="blue" />
+            <Stat
+              label="Cash collected"
+              value={`Rs. ${fmt(data.totalCash)}`}
+              sub={`${data.totalRevenue > 0 ? ((data.totalCash / data.totalRevenue) * 100).toFixed(1) : 0}% of total`}
+              color="green"
+            />
+            <Stat
+              label="Online collected"
+              value={`Rs. ${fmt(data.totalOnline)}`}
+              sub={`${data.totalRevenue > 0 ? ((data.totalOnline / data.totalRevenue) * 100).toFixed(1) : 0}% of total`}
+              color="blue"
+            />
             <Stat label="Discounts given" value={`Rs. ${fmt(data.totalDiscount)}`} color="amber" />
             <Stat label="Bills generated" value={String(data.billCount)} color="violet" />
             <Stat label="New patients" value={String(data.patientCount)} color="zinc" />
-            <Stat label="Avg bill value" value={data.billCount > 0 ? `Rs. ${fmt(data.totalRevenue / data.billCount)}` : '—'} color="zinc" />
-            <Stat label="Period" value={data.from === data.to ? data.from : `${data.from} → ${data.to}`} color="zinc" />
+            <Stat
+              label="Avg bill value"
+              value={data.billCount > 0 ? `Rs. ${fmt(data.totalRevenue / data.billCount)}` : '—'}
+              color="zinc"
+            />
+            <Stat
+              label="Period"
+              value={data.from === data.to ? data.from : `${data.from} → ${data.to}`}
+              color="zinc"
+            />
           </div>
 
           {/* ── Revenue trend ──────────────────────────────────────────── */}
@@ -478,8 +564,13 @@ export default function DashboardPage() {
                   {data.categories.map((c, i) => (
                     <div key={c.category} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="size-2.5 rounded-full shrink-0" style={{ background: colorFor(c.category, i) }} />
-                        <span className="text-zinc-700">{c.category.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        <span
+                          className="size-2.5 rounded-full shrink-0"
+                          style={{ background: colorFor(c.category, i) }}
+                        />
+                        <span className="text-zinc-700">
+                          {c.category.replace(/([A-Z])/g, ' $1').trim()}
+                        </span>
                       </div>
                       <span className="font-medium text-zinc-950">Rs. {fmt(c.revenue)}</span>
                     </div>
@@ -499,11 +590,15 @@ export default function DashboardPage() {
                       <div key={m.name}>
                         <div className="mb-1 flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
-                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-600">{i + 1}</span>
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-600">
+                              {i + 1}
+                            </span>
                             <span className="text-zinc-800 font-medium">{m.name}</span>
                           </div>
                           <div className="text-right">
-                            <span className="font-semibold text-zinc-950">Rs. {fmt(m.revenue)}</span>
+                            <span className="font-semibold text-zinc-950">
+                              Rs. {fmt(m.revenue)}
+                            </span>
                             <span className="ml-2 text-xs text-zinc-400">× {m.qty}</span>
                           </div>
                         </div>
@@ -530,7 +625,9 @@ export default function DashboardPage() {
                   <thead>
                     <tr>
                       {['Date', 'Bills', 'Cash', 'Online', 'Revenue'].map((h) => (
-                        <th key={h} className="px-4 py-2 font-medium text-zinc-500">{h}</th>
+                        <th key={h} className="px-4 py-2 font-medium text-zinc-500">
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -541,7 +638,9 @@ export default function DashboardPage() {
                         <td className="px-4 py-2 text-zinc-600">{d.bills}</td>
                         <td className="px-4 py-2 text-emerald-700">Rs. {fmt(d.cash)}</td>
                         <td className="px-4 py-2 text-blue-700">Rs. {fmt(d.online)}</td>
-                        <td className="px-4 py-2 font-semibold text-zinc-950">Rs. {fmt(d.revenue)}</td>
+                        <td className="px-4 py-2 font-semibold text-zinc-950">
+                          Rs. {fmt(d.revenue)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

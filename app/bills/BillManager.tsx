@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { type FormEvent,useEffect, useMemo, useRef, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,11 +146,7 @@ export default function BillManager() {
     const q = patientQuery.trim().toLowerCase();
     if (!q) return patients.slice(0, 8);
     return patients
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          (p.phone ?? '').includes(q),
-      )
+      .filter((p) => p.name.toLowerCase().includes(q) || (p.phone ?? '').includes(q))
       .slice(0, 8);
   }, [patientQuery, patients]);
 
@@ -185,14 +181,18 @@ export default function BillManager() {
     try {
       const res = await fetch('/api/patients', { cache: 'no-store' });
       if (res.ok) setPatients((await res.json()) as PatientOption[]);
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   };
 
   const fetchMedicines = async () => {
     try {
       const res = await fetch('/api/medicines', { cache: 'no-store' });
       if (res.ok) setMedicines((await res.json()) as MedicineOption[]);
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   };
 
   useEffect(() => {
@@ -257,8 +257,7 @@ export default function BillManager() {
     });
   };
 
-  const addItem = () =>
-    setForm((cur) => ({ ...cur, items: [...cur.items, makeBlankItem()] }));
+  const addItem = () => setForm((cur) => ({ ...cur, items: [...cur.items, makeBlankItem()] }));
 
   const removeItem = (index: number) => {
     if (form.items.length > 1)
@@ -290,7 +289,7 @@ export default function BillManager() {
   useEffect(() => {
     const cashVal = parseFloat(form.paidCash) || 0;
     const remaining = Math.max(0, total - cashVal);
-    
+
     // Check if what's already in the form matches the remaining value to prevent loops
     const currentOnline = parseFloat(form.paidOnline) || 0;
     if (Math.abs(currentOnline - remaining) > 0.01) {
@@ -333,7 +332,8 @@ export default function BillManager() {
       doc.setTextColor(180, 207, 250);
       doc.text(
         '17, Near Uttarakhand Grahmin Bank, Near Shiv Shakti Vihar, Chharaval Nayabad, Haldwani - 263139, Uttarakhand',
-        margin, 26
+        margin,
+        26,
       );
 
       // INVOICE label (right side in header)
@@ -345,7 +345,7 @@ export default function BillManager() {
       // ═══════════════════════════════════════════════════════════
       // PATIENT DETAILS
       // ═══════════════════════════════════════════════════════════
-      let patientDetails = { age: '', diagnosis: '', visitAt: '' };
+      const patientDetails = { age: '', diagnosis: '', visitAt: '' };
       if (bill.patientId) {
         try {
           const pRes = await fetch(`/api/patients/${bill.patientId}`);
@@ -353,7 +353,9 @@ export default function BillManager() {
             const p = await pRes.json();
             patientDetails.age = p.age ? `${p.age} Yrs` : '';
             patientDetails.diagnosis = p.diagnosis || '';
-            patientDetails.visitAt = p.visitAt ? new Date(p.visitAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '';
+            patientDetails.visitAt = p.visitAt
+              ? new Date(p.visitAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+              : '';
           }
         } catch (e) {}
       }
@@ -363,7 +365,7 @@ export default function BillManager() {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(15, 23, 42);
-      
+
       doc.text('Patient Name:', margin, y);
       doc.setFont('helvetica', 'normal');
       doc.text(bill.patientName, margin + 26, y);
@@ -382,17 +384,22 @@ export default function BillManager() {
       doc.setFont('helvetica', 'bold');
       doc.text('Visit Time:', 100, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(patientDetails.visitAt || new Date(bill.billAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), 100 + 21, y);
+      doc.text(
+        patientDetails.visitAt ||
+          new Date(bill.billAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        100 + 21,
+        y,
+      );
 
       y += 6;
       doc.setFont('helvetica', 'bold');
       doc.text('Problem/Diagnosis:', margin, y);
       doc.setFont('helvetica', 'normal');
-      
+
       const splitDiag = doc.splitTextToSize(patientDetails.diagnosis || 'N/A', W - margin - 50);
       doc.text(splitDiag, margin + 35, y);
 
-      y += (splitDiag.length * 5) + 3;
+      y += splitDiag.length * 5 + 3;
 
       // Divider
       doc.setDrawColor(226, 232, 240);
@@ -403,10 +410,16 @@ export default function BillManager() {
       // ═══════════════════════════════════════════════════════════
       // ITEMS TABLE
       // ═══════════════════════════════════════════════════════════
-      const tableRows = bill.items.map(item => {
+      const tableRows = bill.items.map((item) => {
         const qty = Number(item.quantity) || 0;
         const price = Number(item.unitPrice) || 0;
-        return [item.description, item.category, qty.toString(), `Rs. ${price.toFixed(2)}`, `Rs. ${(qty * price).toFixed(2)}`];
+        return [
+          item.description,
+          item.category,
+          qty.toString(),
+          `Rs. ${price.toFixed(2)}`,
+          `Rs. ${(qty * price).toFixed(2)}`,
+        ];
       });
 
       autoTable(doc, {
@@ -490,8 +503,8 @@ export default function BillManager() {
       // INVOICE META ROW (Moved to Footer side)
       // ═══════════════════════════════════════════════════════════
       const pageH = 297;
-      
-      doc.setFillColor(241, 245, 249);   // slate-100
+
+      doc.setFillColor(241, 245, 249); // slate-100
       doc.rect(0, pageH - 40, W, 18, 'F');
 
       doc.setFont('helvetica', 'bold');
@@ -505,10 +518,19 @@ export default function BillManager() {
       doc.setFontSize(10);
       doc.setTextColor(15, 23, 42);
       doc.text(formatBillNum(bill.billNumber), margin, pageH - 26);
-      doc.text(new Date(bill.billAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }), 80, pageH - 26);
+      doc.text(
+        new Date(bill.billAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'Asia/Kolkata',
+        }),
+        80,
+        pageH - 26,
+      );
 
       // Status pill
-      doc.setFillColor(34, 197, 94);    // green-500
+      doc.setFillColor(34, 197, 94); // green-500
       doc.roundedRect(140, pageH - 31, 24, 7, 2, 2, 'F');
       doc.setFontSize(8);
       doc.setTextColor(255, 255, 255);
@@ -531,11 +553,18 @@ export default function BillManager() {
       doc.setTextColor(180, 207, 250);
       doc.text(
         '17, Chharaval Nayabad, Near Uttarakhand Grahmin Bank, Haldwani - 263139, Uttarakhand',
-        W / 2, pageH - 10, { align: 'center' }
+        W / 2,
+        pageH - 10,
+        { align: 'center' },
       );
 
       doc.setTextColor(150, 190, 240);
-      doc.text('Thank you for choosing Sharda ENT Hospital. Wishing you speedy recovery!', W / 2, pageH - 5, { align: 'center' });
+      doc.text(
+        'Thank you for choosing Sharda ENT Hospital. Wishing you speedy recovery!',
+        W / 2,
+        pageH - 5,
+        { align: 'center' },
+      );
 
       // Save
       doc.save(`${formatBillNum(bill.billNumber)}_Sharda_ENT.pdf`);
@@ -544,10 +573,12 @@ export default function BillManager() {
       if (bill.phone) {
         const cleaned = bill.phone.replace(/\D/g, '');
         const wa = cleaned.length === 10 ? `91${cleaned}` : cleaned;
-        
-        let itemsText = bill.items.map(i => {
-           return `${Number(i.quantity)}x ${i.description} - Rs. ${(Number(i.quantity) * Number(i.unitPrice)).toFixed(2)}`;
-        }).join('\n');
+
+        const itemsText = bill.items
+          .map((i) => {
+            return `${Number(i.quantity)}x ${i.description} - Rs. ${(Number(i.quantity) * Number(i.unitPrice)).toFixed(2)}`;
+          })
+          .join('\n');
 
         const sub = (Number(bill.totalAmount) + Number(bill.discount)).toFixed(2);
         const disc = Number(bill.discount).toFixed(2);
@@ -582,7 +613,7 @@ _(Official PDF invoice attached below)_`.trim();
     } catch (err) {
       console.error(err);
       alert('Could not generate PDF.');
-    };
+    }
   };
 
   // ── Edit helpers ────────────────────────────────────────────────────────────
@@ -622,9 +653,18 @@ _(Official PDF invoice attached below)_`.trim();
       return;
     }
     for (const item of form.items) {
-      if (!item.description.trim()) { setError('All items must have a description.'); return; }
-      if (!item.quantity || parseFloat(item.quantity) <= 0) { setError('All items must have a valid quantity.'); return; }
-      if (!item.unitPrice || parseFloat(item.unitPrice) <= 0) { setError('All items must have a valid unit price.'); return; }
+      if (!item.description.trim()) {
+        setError('All items must have a description.');
+        return;
+      }
+      if (!item.quantity || parseFloat(item.quantity) <= 0) {
+        setError('All items must have a valid quantity.');
+        return;
+      }
+      if (!item.unitPrice || parseFloat(item.unitPrice) <= 0) {
+        setError('All items must have a valid unit price.');
+        return;
+      }
     }
 
     // Cash + Online MUST equal the bill total — always required
@@ -673,7 +713,8 @@ _(Official PDF invoice attached below)_`.trim();
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result?.error || `Could not ${isEdit ? 'update' : 'create'} bill.`);
+      if (!res.ok)
+        throw new Error(result?.error || `Could not ${isEdit ? 'update' : 'create'} bill.`);
 
       const saved = result as BillPayload;
       if (isEdit) {
@@ -701,7 +742,6 @@ _(Official PDF invoice attached below)_`.trim();
 
   return (
     <div className="space-y-8">
-
       {/* ── Bill form ─────────────────────────────────────────────────────── */}
       <section
         id="bill-form-section"
@@ -713,9 +753,7 @@ _(Official PDF invoice attached below)_`.trim();
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500">
                 Editing bill
               </p>
-              <h2 className="mt-2 text-2xl font-semibold text-zinc-950">
-                Edit bill record
-              </h2>
+              <h2 className="mt-2 text-2xl font-semibold text-zinc-950">Edit bill record</h2>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -731,12 +769,19 @@ _(Official PDF invoice attached below)_`.trim();
 
         {isEditing && (
           <div className="mb-4 flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4 shrink-0">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="size-4 shrink-0"
+            >
               <path d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" />
             </svg>
             Editing&nbsp;
             <span className="font-semibold">
-              {bills.find((b) => b.id === editingId) ? formatBillNum(bills.find((b) => b.id === editingId)!.billNumber) : 'bill'}
+              {bills.find((b) => b.id === editingId)
+                ? formatBillNum(bills.find((b) => b.id === editingId)!.billNumber)
+                : 'bill'}
             </span>
             &mdash; submit to save changes.
           </div>
@@ -744,7 +789,6 @@ _(Official PDF invoice attached below)_`.trim();
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6">
-
             {/* ── Patient search + Phone + Bill Date ──────────────────────── */}
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2 text-sm text-zinc-700">
@@ -778,8 +822,17 @@ _(Official PDF invoice attached below)_`.trim();
                   ) : (
                     <>
                       <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                          <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          className="size-4"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                       <input
@@ -904,11 +957,7 @@ _(Official PDF invoice attached below)_`.trim();
                           >
                             <option value="">— Select medicine —</option>
                             {medicines.map((med) => (
-                              <option
-                                key={med.id}
-                                value={med.id}
-                                disabled={med.totalStock <= 0}
-                              >
+                              <option key={med.id} value={med.id} disabled={med.totalStock <= 0}>
                                 {med.name} — Rs. {med.sellingPrice} — Stock: {med.totalStock}
                               </option>
                             ))}
@@ -917,7 +966,9 @@ _(Official PDF invoice attached below)_`.trim();
                       ) : defaultPrice != null ? (
                         <label className="space-y-2 text-sm text-zinc-700">
                           Auto Price
-                          <div className={`${inputCls} flex items-center justify-between !cursor-default select-none`}>
+                          <div
+                            className={`${inputCls} flex items-center justify-between !cursor-default select-none`}
+                          >
                             <span className="text-zinc-400 text-xs">Default</span>
                             <span className="font-semibold text-zinc-950">Rs. {defaultPrice}</span>
                           </div>
@@ -971,13 +1022,14 @@ _(Official PDF invoice attached below)_`.trim();
                       {/* Amount chip */}
                       <label className="space-y-2 text-sm text-zinc-700">
                         Amount
-                        <div className={`${inputCls} flex items-center justify-between !cursor-default select-none bg-zinc-100 border-zinc-100`}>
+                        <div
+                          className={`${inputCls} flex items-center justify-between !cursor-default select-none bg-zinc-100 border-zinc-100`}
+                        >
                           <span className="text-zinc-400 text-xs">Total</span>
                           <span className="font-semibold text-zinc-950">
                             Rs.{' '}
                             {(
-                              (parseFloat(item.quantity) || 0) *
-                              (parseFloat(item.unitPrice) || 0)
+                              (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)
                             ).toFixed(2)}
                           </span>
                         </div>
@@ -990,7 +1042,6 @@ _(Official PDF invoice attached below)_`.trim();
 
             {/* ── Summary + payment ───────────────────────────────────────── */}
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 space-y-6">
-
               {/* Discount + breakdown */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-2 text-sm text-zinc-700">
@@ -1039,13 +1090,24 @@ _(Official PDF invoice attached below)_`.trim();
                   {/* Cash */}
                   <label className="space-y-2 text-sm text-zinc-700">
                     <span className="flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4 text-emerald-600">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.798 7.45c.512-.67 1.135-.95 1.702-.95s1.19.28 1.702.95a.75.75 0 0 0 1.192-.91C12.637 5.55 11.596 5 10.5 5s-2.137.55-2.894 1.54A5.205 5.205 0 0 0 6.83 8H6a.75.75 0 0 0 0 1.5h.465a6.7 6.7 0 0 0 0 1H6A.75.75 0 0 0 6 12h.83c.182.528.43 1.005.776 1.46C8.363 14.45 9.404 15 10.5 15s2.137-.55 2.894-1.54a.75.75 0 0 0-1.192-.91c-.512.67-1.135.95-1.702.95s-1.19-.28-1.702-.95A3.505 3.505 0 0 1 8.362 12h2.388a.75.75 0 0 0 0-1.5H8.087a5.2 5.2 0 0 1 0-1h2.663a.75.75 0 0 0 0-1.5H8.362c.08-.18.17-.35.436-.55Z" clipRule="evenodd" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="size-4 text-emerald-600"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.798 7.45c.512-.67 1.135-.95 1.702-.95s1.19.28 1.702.95a.75.75 0 0 0 1.192-.91C12.637 5.55 11.596 5 10.5 5s-2.137.55-2.894 1.54A5.205 5.205 0 0 0 6.83 8H6a.75.75 0 0 0 0 1.5h.465a6.7 6.7 0 0 0 0 1H6A.75.75 0 0 0 6 12h.83c.182.528.43 1.005.776 1.46C8.363 14.45 9.404 15 10.5 15s2.137-.55 2.894-1.54a.75.75 0 0 0-1.192-.91c-.512.67-1.135.95-1.702.95s-1.19-.28-1.702-.95A3.505 3.505 0 0 1 8.362 12h2.388a.75.75 0 0 0 0-1.5H8.087a5.2 5.2 0 0 1 0-1h2.663a.75.75 0 0 0 0-1.5H8.362c.08-.18.17-.35.436-.55Z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       Cash
                     </span>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">Rs.</span>
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
+                        Rs.
+                      </span>
                       <input
                         id="paid-cash"
                         className={`${inputCls} pl-10`}
@@ -1062,13 +1124,20 @@ _(Official PDF invoice attached below)_`.trim();
                   {/* Online */}
                   <label className="space-y-2 text-sm text-zinc-700">
                     <span className="flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4 text-blue-600">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="size-4 text-blue-600"
+                      >
                         <path d="M2.5 4A1.5 1.5 0 0 0 1 5.5v1h18v-1A1.5 1.5 0 0 0 17.5 4h-15ZM19 8.5H1V14.5A1.5 1.5 0 0 0 2.5 16h15a1.5 1.5 0 0 0 1.5-1.5V8.5ZM3 13.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75Zm4.75-.75a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" />
                       </svg>
                       Online
                     </span>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">Rs.</span>
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
+                        Rs.
+                      </span>
                       <input
                         id="paid-online"
                         className={`${inputCls} pl-10`}
@@ -1114,8 +1183,12 @@ _(Official PDF invoice attached below)_`.trim();
               disabled={loading}
             >
               {loading
-                ? isEditing ? 'Updating Bill...' : 'Creating Bill...'
-                : isEditing ? 'Update Bill' : 'Create Bill'}
+                ? isEditing
+                  ? 'Updating Bill...'
+                  : 'Creating Bill...'
+                : isEditing
+                  ? 'Update Bill'
+                  : 'Create Bill'}
             </button>
           </div>
         </form>
@@ -1124,7 +1197,9 @@ _(Official PDF invoice attached below)_`.trim();
           <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>
         )}
         {success && (
-          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>
+          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {success}
+          </p>
         )}
       </section>
 
@@ -1132,7 +1207,9 @@ _(Official PDF invoice attached below)_`.trim();
       <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-zinc-950">Recent Bills <span className="text-sm font-normal text-zinc-400">(last 10)</span></h3>
+            <h3 className="text-lg font-semibold text-zinc-950">
+              Recent Bills <span className="text-sm font-normal text-zinc-400">(last 10)</span>
+            </h3>
             <p className="mt-1 text-sm text-zinc-600">View and manage all created bills.</p>
           </div>
           <div className="text-sm font-medium text-zinc-500">Sorted by newest first</div>
@@ -1169,13 +1246,17 @@ _(Official PDF invoice attached below)_`.trim();
                       key={bill.id}
                       className={`transition ${editingId === bill.id ? 'bg-amber-50' : 'hover:bg-zinc-50'}`}
                     >
-                      <td className="px-4 py-3 font-semibold text-zinc-950">{formatBillNum(bill.billNumber)}</td>
+                      <td className="px-4 py-3 font-semibold text-zinc-950">
+                        {formatBillNum(bill.billNumber)}
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-zinc-950">{bill.patientName}</p>
                         {bill.phone && <p className="text-xs text-zinc-400">{bill.phone}</p>}
                       </td>
                       <td className="px-4 py-3 text-zinc-600">
-                        {new Date(bill.billAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                        {new Date(bill.billAt).toLocaleDateString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                        })}
                       </td>
                       <td className="px-4 py-3 text-zinc-600">
                         {bill.items.length} item{bill.items.length !== 1 ? 's' : ''}
@@ -1196,9 +1277,7 @@ _(Official PDF invoice attached below)_`.trim();
                             Online Rs. {online.toFixed(2)}
                           </div>
                         )}
-                        {cash === 0 && online === 0 && (
-                          <span className="text-zinc-400">—</span>
-                        )}
+                        {cash === 0 && online === 0 && <span className="text-zinc-400">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end items-center gap-2">
@@ -1207,8 +1286,14 @@ _(Official PDF invoice attached below)_`.trim();
                             onClick={() => handleWhatsAppShare(bill)}
                             className="inline-flex items-center gap-1.5 rounded-xl border border-[#25D366]/30 bg-[#25D366]/10 px-3 py-1.5 text-xs font-medium text-[#1DA851] transition hover:bg-[#25D366]/20"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="14"
+                              height="14"
+                              fill="currentColor"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
                             </svg>
                             WhatsApp
                           </button>
@@ -1227,7 +1312,12 @@ _(Official PDF invoice attached below)_`.trim();
                               onClick={() => startEdit(bill)}
                               className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-3">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 16 16"
+                                fill="currentColor"
+                                className="size-3"
+                              >
                                 <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.714 1.272l-.547 2.19a.75.75 0 0 0 .906.906l2.19-.547a2.75 2.75 0 0 0 1.272-.714l4.262-4.263a1.75 1.75 0 0 0 0-2.475ZM2.75 3.5c-.69 0-1.25.56-1.25 1.25v8.5c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 0 11 9v4.25H2.75V4.75H7A.75.75 0 0 0 7 3.5H2.75Z" />
                               </svg>
                               Edit

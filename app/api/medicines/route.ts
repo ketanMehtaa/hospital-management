@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { PrismaClient } from '@/app/generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL must be defined in the environment.');
@@ -25,25 +26,25 @@ type MedRow = Awaited<ReturnType<typeof prisma.medicine.findMany>>[number] & {
 };
 
 const toPayload = (m: MedRow) => ({
-  id:           m.id,
-  barcode:      m.barcode,
-  name:         m.name,
-  category:     m.category,
-  unit:         m.unit,
-  buyingPrice:  m.buyingPrice  === null ? null : Number(m.buyingPrice),
+  id: m.id,
+  barcode: m.barcode,
+  name: m.name,
+  category: m.category,
+  unit: m.unit,
+  buyingPrice: m.buyingPrice === null ? null : Number(m.buyingPrice),
   sellingPrice: Number(m.sellingPrice),
-  minStock:     Number(m.minStock),
-  totalStock:   m.batches.reduce((s, b) => s + Number(b.quantity), 0),
-  batches:      (m as any).batches.map((b: any) => ({
-    id:            b.id,
-    batchNumber:   b.batchNumber,
-    expiryDate:    b.expiryDate,
-    quantity:      Number(b.quantity),
+  minStock: Number(m.minStock),
+  totalStock: m.batches.reduce((s, b) => s + Number(b.quantity), 0),
+  batches: (m as any).batches.map((b: any) => ({
+    id: b.id,
+    batchNumber: b.batchNumber,
+    expiryDate: b.expiryDate,
+    quantity: Number(b.quantity),
     purchasePrice: b.purchasePrice === null ? null : Number(b.purchasePrice),
-    createdAt:     b.createdAt,
+    createdAt: b.createdAt,
   })),
-  createdAt:    m.createdAt,
-  deletedAt:    m.deletedAt,
+  createdAt: m.createdAt,
+  deletedAt: m.deletedAt,
 });
 
 // ─── GET — list all medicines with aggregated stock ───────────────────────────
@@ -69,7 +70,7 @@ export async function GET() {
 // ─── POST — create a new medicine (does NOT take stock; use restock to add batches) ──
 
 export async function POST(request: NextRequest) {
-  const body = await request.json() as Record<string, unknown>;
+  const body = (await request.json()) as Record<string, unknown>;
   const { barcode, name, category, unit, buyingPrice, sellingPrice, minStock } = body;
 
   const normName = typeof name === 'string' ? name.trim() : '';
@@ -82,18 +83,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const parsedBuying  = toNum(buyingPrice);
+  const parsedBuying = toNum(buyingPrice);
   const parsedMinStock = toNum(minStock);
 
   const medicine = await prisma.medicine.create({
     data: {
-      barcode:      typeof barcode === 'string' ? barcode.trim() || undefined : undefined,
-      name:         normName,
-      category:     (category as any) || 'Other',
-      unit:         (unit as any) || 'Strip',
-      buyingPrice:  parsedBuying,
+      barcode: typeof barcode === 'string' ? barcode.trim() || undefined : undefined,
+      name: normName,
+      category: (category as any) || 'Other',
+      unit: (unit as any) || 'Strip',
+      buyingPrice: parsedBuying,
       sellingPrice: parsedSelling,
-      minStock:     parsedMinStock ?? 10,
+      minStock: parsedMinStock ?? 10,
     },
     include: { batches: true },
   });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { type FormEvent,useEffect, useMemo, useState } from 'react';
 
 type PatientPayload = {
   id: string;
@@ -30,7 +30,12 @@ const getTodayDateInput = () => {
 };
 
 const getCurrentTimeInput = () => {
-  return new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  return new Date().toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  });
 };
 
 const createInitialFormState = (): FormState => ({
@@ -47,7 +52,12 @@ const createInitialFormState = (): FormState => ({
 const visitAtToFormFields = (visitAt: string): { visitDate: string; visitTime: string } => {
   const d = new Date(visitAt);
   const visitDate = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  const visitTime = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  const visitTime = d.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  });
   return { visitDate, visitTime };
 };
 
@@ -106,7 +116,10 @@ export default function PatientManager() {
   };
 
   const handleAgeChange = (value: string) => {
-    if (!value) { handleChange('age', ''); return; }
+    if (!value) {
+      handleChange('age', '');
+      return;
+    }
     const num = Number(value);
     if (Number.isNaN(num)) return;
     handleChange('age', String(Math.min(110, Math.max(0, Math.trunc(num)))));
@@ -184,9 +197,7 @@ export default function PatientManager() {
       }
 
       if (isEdit) {
-        setPatients((current) =>
-          current.map((p) => (p.id === savedPatient.id ? savedPatient : p)),
-        );
+        setPatients((current) => current.map((p) => (p.id === savedPatient.id ? savedPatient : p)));
         setSuccess('Patient updated successfully.');
         setEditingId(null);
       } else {
@@ -202,7 +213,7 @@ export default function PatientManager() {
     }
   };
 
-  const patientCount = useMemo(() => patients.length, [patients]);
+  // const patientCount = useMemo(() => patients.length, [patients]);
   const isEditing = editingId !== null;
 
   return (
@@ -368,9 +379,7 @@ export default function PatientManager() {
               id="patient-submit-btn"
               type="submit"
               className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                isEditing
-                  ? 'bg-amber-600 hover:bg-amber-500'
-                  : 'bg-zinc-950 hover:bg-zinc-800'
+                isEditing ? 'bg-amber-600 hover:bg-amber-500' : 'bg-zinc-950 hover:bg-zinc-800'
               }`}
               disabled={loading}
             >
@@ -389,13 +398,17 @@ export default function PatientManager() {
           <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>
         ) : null}
         {success ? (
-          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>
+          <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {success}
+          </p>
         ) : null}
       </section>
 
       {/* ── Patient list ─────────────────────────────────────────────────── */}
       <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20">
-        <h3 className="mb-4 text-lg font-semibold text-zinc-950">Recent patients <span className="text-sm font-normal text-zinc-400">(last 10)</span></h3>
+        <h3 className="mb-4 text-lg font-semibold text-zinc-950">
+          Recent patients <span className="text-sm font-normal text-zinc-400">(last 10)</span>
+        </h3>
 
         {loading && patients.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">
@@ -421,20 +434,20 @@ export default function PatientManager() {
                 {patients.slice(0, 10).map((patient) => (
                   <tr
                     key={patient.id}
-                    className={`transition ${
-                      editingId === patient.id
-                        ? 'bg-amber-50'
-                        : 'hover:bg-zinc-50'
-                    }`}
+                    className={`transition ${editingId === patient.id ? 'bg-amber-50' : 'hover:bg-zinc-50'}`}
                   >
                     <td className="px-4 py-3 font-semibold text-zinc-950">{patient.name}</td>
                     <td className="px-4 py-3">
-                      <div>{new Date(patient.visitAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
+                      <div>
+                        {new Date(patient.visitAt).toLocaleDateString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                        })}
+                      </div>
                       <div className="text-xs text-zinc-500">
                         {new Date(patient.visitAt).toLocaleTimeString('en-IN', {
                           hour: '2-digit',
                           minute: '2-digit',
-                          timeZone: 'Asia/Kolkata'
+                          timeZone: 'Asia/Kolkata',
                         })}
                       </div>
                     </td>

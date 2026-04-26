@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { PrismaClient } from '@/app/generated/prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL must be defined.');
@@ -17,10 +18,10 @@ export async function GET(request: NextRequest) {
   const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
   const fromStr = searchParams.get('from') ?? todayStr;
-  const toStr   = searchParams.get('to')   ?? todayStr;
+  const toStr = searchParams.get('to') ?? todayStr;
 
   const from = new Date(`${fromStr}T00:00:00+05:30`);
-  const to   = new Date(`${toStr}T23:59:59.999+05:30`);
+  const to = new Date(`${toStr}T23:59:59.999+05:30`);
 
   // ── Fetch bills in range ───────────────────────────────────────────────────
   const bills = await prisma.bill.findMany({
@@ -45,8 +46,8 @@ export async function GET(request: NextRequest) {
 
   // ── Aggregate totals ───────────────────────────────────────────────────────
   let totalRevenue = 0;
-  let totalCash    = 0;
-  let totalOnline  = 0;
+  let totalCash = 0;
+  let totalOnline = 0;
   let totalDiscount = 0;
 
   // category → revenue
@@ -54,26 +55,27 @@ export async function GET(request: NextRequest) {
   // medicine name → { qty, revenue }
   const medicineMap: Record<string, { qty: number; revenue: number }> = {};
   // date string (YYYY-MM-DD) → { revenue, cash, online }
-  const dailyMap: Record<string, { revenue: number; cash: number; online: number; bills: number }> = {};
+  const dailyMap: Record<string, { revenue: number; cash: number; online: number; bills: number }> =
+    {};
 
   for (const bill of bills) {
     const revenue = Number(bill.totalAmount);
-    const cash    = Number(bill.paidCash);
-    const online  = Number(bill.paidOnline);
+    const cash = Number(bill.paidCash);
+    const online = Number(bill.paidOnline);
     const discount = Number(bill.discount);
 
-    totalRevenue  += revenue;
-    totalCash     += cash;
-    totalOnline   += online;
+    totalRevenue += revenue;
+    totalCash += cash;
+    totalOnline += online;
     totalDiscount += discount;
 
     // Daily buckets
     const dateKey = new Date(bill.billAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     if (!dailyMap[dateKey]) dailyMap[dateKey] = { revenue: 0, cash: 0, online: 0, bills: 0 };
     dailyMap[dateKey].revenue += revenue;
-    dailyMap[dateKey].cash    += cash;
-    dailyMap[dateKey].online  += online;
-    dailyMap[dateKey].bills   += 1;
+    dailyMap[dateKey].cash += cash;
+    dailyMap[dateKey].online += online;
+    dailyMap[dateKey].bills += 1;
 
     // Category breakdown
     for (const item of bill.items) {
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
       if (item.medicineId && item.medicine) {
         const name = item.medicine.name;
         if (!medicineMap[name]) medicineMap[name] = { qty: 0, revenue: 0 };
-        medicineMap[name].qty     += Number(item.quantity);
+        medicineMap[name].qty += Number(item.quantity);
         medicineMap[name].revenue += Number(item.amount);
       }
     }

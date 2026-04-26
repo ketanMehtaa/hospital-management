@@ -14,6 +14,7 @@ A Next.js hospital management app for patients, medicines, and billing.
 ## Quick Start (Docker — offline / local)
 
 ### 1. Copy environment file
+
 ```bash
 cp env.example .env
 ```
@@ -22,16 +23,19 @@ cp env.example .env
 > Change `DASHBOARD_PIN` to any 4-digit number you want.
 
 ### 2. Start the database
+
 ```bash
 docker compose up -d
 ```
 
 ### 3. Run migrations
+
 ```bash
 npx prisma migrate dev --name init
 ```
 
 ### 4. Start the dev server
+
 ```bash
 pnpm dev
 ```
@@ -41,6 +45,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ---
 
 ## Rebuild Docker app image (after code changes)
+
 ```bash
 docker compose up -d --build
 ```
@@ -49,12 +54,12 @@ docker compose up -d --build
 
 ## Database Commands
 
-| Command | Description |
-|---|---|
-| `npx prisma migrate dev --name <name>` | Create & apply a new migration |
-| `npx prisma migrate deploy` | Apply pending migrations (production) |
-| `npx prisma studio` | Open visual DB browser at port 5555 |
-| `pnpm db:seed` | Seed with 1 000 patients + 60 medicines + bills |
+| Command                                | Description                                     |
+| -------------------------------------- | ----------------------------------------------- |
+| `npx prisma migrate dev --name <name>` | Create & apply a new migration                  |
+| `npx prisma migrate deploy`            | Apply pending migrations (production)           |
+| `npx prisma studio`                    | Open visual DB browser at port 5555             |
+| `pnpm db:seed`                         | Seed with 1 000 patients + 60 medicines + bills |
 
 ---
 
@@ -69,6 +74,7 @@ pnpm db:seed
 > **Warning:** The seed script **clears all existing data** before inserting.
 >
 > What gets seeded:
+>
 > - 🏥 **60 medicines** across all categories (Antibiotic, Antihistamine, Steroid, etc.) with realistic buying/selling prices and stock
 > - 👤 **1 000 patients** with Indian names, diagnoses, phone numbers, and visit dates spread over the last 90 days
 > - 🧾 **~1 200–1 500 bills** (1–2 per patient) each containing a consultation, optional services (Endoscopy, Radiology, etc.), and 1–4 medicine items — with cash/online payment split
@@ -77,10 +83,10 @@ pnpm db:seed
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/hospital?schema=public` |
-| `DASHBOARD_PIN` | 4-digit PIN to lock the analytics dashboard | `0000` |
+| Variable        | Description                                 | Example                                                                |
+| --------------- | ------------------------------------------- | ---------------------------------------------------------------------- |
+| `DATABASE_URL`  | PostgreSQL connection string                | `postgresql://postgres:postgres@localhost:5432/hospital?schema=public` |
+| `DASHBOARD_PIN` | 4-digit PIN to lock the analytics dashboard | `0000`                                                                 |
 
 ---
 
@@ -99,13 +105,12 @@ prisma/
   seed.ts        → Test data seeder
 ```
 
-
-
 ## 💾 Database Backup & Restore
 
 Since the application uses a Dockerized PostgreSQL database, you can safely create and restore backups directly through the active container without needing any local PostgreSQL installations.
 
 ### 1. Create a Backup
+
 This generates a compressed database dump and extracts it to a local `backups/` folder.
 
 ```bash
@@ -118,6 +123,7 @@ docker cp hospital-management-db-1:/tmp/hospital.dump backups/hospital.dump
 ```
 
 ### 2. Restore from a Backup
+
 > **⚠️ Warning:** The restore command uses the `-c` flag which drops existing database tables before restoring. Current data will be fully overwritten.
 
 ```bash
