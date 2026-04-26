@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent,useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
 type PatientPayload = {
   id: string;
