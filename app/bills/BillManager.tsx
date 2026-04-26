@@ -308,114 +308,122 @@ export default function BillManager() {
       const W = 210;
       const margin = 14;
 
-      // ═══════════════════════════════════════════════════════════
-      // HEADER BAND
-      // ═══════════════════════════════════════════════════════════
-      // Dark navy header bar
-      doc.setFillColor(10, 36, 78);
-      doc.rect(0, 0, W, 36, 'F');
+      // ───────────────────────────────
+      // FETCH PATIENT EXTRA DATA
+      // ───────────────────────────────
+      const patientDetails = {
+        age: '',
+        diagnosis: '',
+        visitAt: '',
+      };
 
-      // Hospital name
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(255, 255, 255);
-      doc.text('Sharda ENT Hospital & Diagnostic Centre', margin, 13);
-
-      // Speciality tag
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.setTextColor(186, 214, 255);
-      doc.text('ENT Specialist  |  Diagnostic Centre  |  Healthcare', margin, 19.5);
-
-      // Full address
-      doc.setFontSize(8);
-      doc.setTextColor(180, 207, 250);
-      doc.text(
-        '17, Near Uttarakhand Grahmin Bank, Near Shiv Shakti Vihar, Chharaval Nayabad, Haldwani - 263139, Uttarakhand',
-        margin,
-        26,
-      );
-
-      // INVOICE label (right side in header)
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(255, 255, 255);
-      doc.text('INVOICE', W - margin, 20, { align: 'right' });
-
-      // ═══════════════════════════════════════════════════════════
-      // PATIENT DETAILS
-      // ═══════════════════════════════════════════════════════════
-      const patientDetails = { age: '', diagnosis: '', visitAt: '' };
       if (bill.patientId) {
         try {
-          const pRes = await fetch(`/api/patients/${bill.patientId}`);
-          if (pRes.ok) {
-            const p = await pRes.json();
+          const res = await fetch(`/api/patients/${bill.patientId}`);
+          if (res.ok) {
+            const p = await res.json();
             patientDetails.age = p.age ? `${p.age} Yrs` : '';
             patientDetails.diagnosis = p.diagnosis || '';
             patientDetails.visitAt = p.visitAt
-              ? new Date(p.visitAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+              ? new Date(p.visitAt).toLocaleString('en-IN', {
+                  timeZone: 'Asia/Kolkata',
+                })
               : '';
           }
-        } catch (e) {}
+        } catch {}
       }
 
-      let y = 46;
+      // ───────────────────────────────
+      // HEADER
+      // ───────────────────────────────
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.text('Sharda ENT Hospital & Diagnostic Centre', margin, 12);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('ENT Specialist | Diagnostic Centre', margin, 18);
+      doc.text('Haldwani, Uttarakhand', margin, 23);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('INVOICE', W - margin, 12, { align: 'right' });
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Bill No: ${formatBillNum(bill.billNumber)}`, W - margin, 18, {
+        align: 'right',
+      });
+
+      doc.text(
+        `Date: ${new Date(bill.billAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })}`,
+        W - margin,
+        23,
+        { align: 'right' },
+      );
+
+      // Divider
+      doc.setDrawColor(150, 150, 150);
+      doc.line(margin, 28, W - margin, 28);
+
+      // ───────────────────────────────
+      // PATIENT DETAILS (ENHANCED)
+      // ───────────────────────────────
+      let y = 36;
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
-
-      doc.text('Patient Name:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(bill.patientName, margin + 26, y);
-
-      doc.setFont('helvetica', 'bold');
-      doc.text('Phone:', 100, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(bill.phone || 'N/A', 100 + 14, y);
+      doc.text('Patient Details', margin, y);
 
       y += 6;
-      doc.setFont('helvetica', 'bold');
-      doc.text('Age:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(patientDetails.age || 'N/A', margin + 10, y);
 
-      doc.setFont('helvetica', 'bold');
-      doc.text('Visit Time:', 100, y);
       doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      doc.text(`Name: ${bill.patientName}`, margin, y);
+      doc.text(`Phone: ${bill.phone || 'N/A'}`, 110, y);
+
+      y += 6;
+
+      doc.text(`Age: ${patientDetails.age || 'N/A'}`, margin, y);
+
       doc.text(
-        patientDetails.visitAt ||
-          new Date(bill.billAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        100 + 21,
+        `Visit Time: ${patientDetails.visitAt || new Date(bill.billAt).toLocaleString('en-IN')}`,
+        110,
         y,
       );
 
       y += 6;
+
+      // Diagnosis (multi-line)
       doc.setFont('helvetica', 'bold');
-      doc.text('Problem/Diagnosis:', margin, y);
+      doc.text('Diagnosis:', margin, y);
+
       doc.setFont('helvetica', 'normal');
 
-      const splitDiag = doc.splitTextToSize(patientDetails.diagnosis || 'N/A', W - margin - 50);
-      doc.text(splitDiag, margin + 35, y);
+      const diagText = doc.splitTextToSize(patientDetails.diagnosis || 'N/A', W - margin - 40);
 
-      y += splitDiag.length * 5 + 3;
+      doc.text(diagText, margin + 25, y);
+
+      y += diagText.length * 5 + 4;
 
       // Divider
-      doc.setDrawColor(226, 232, 240);
-      doc.setLineWidth(0.5);
+      doc.setDrawColor(200, 200, 200);
       doc.line(margin, y, W - margin, y);
       y += 6;
 
-      // ═══════════════════════════════════════════════════════════
-      // ITEMS TABLE
-      // ═══════════════════════════════════════════════════════════
+      // ───────────────────────────────
+      // TABLE
+      // ───────────────────────────────
       const tableRows = bill.items.map((item) => {
         const qty = Number(item.quantity) || 0;
         const price = Number(item.unitPrice) || 0;
         return [
           item.description,
-          item.category,
           qty.toString(),
           `Rs. ${price.toFixed(2)}`,
           `Rs. ${(qty * price).toFixed(2)}`,
@@ -425,38 +433,31 @@ export default function BillManager() {
       autoTable(doc, {
         startY: y,
         margin: { left: margin, right: margin },
-        head: [['Description', 'Category', 'Qty', 'Unit Price', 'Amount']],
+        head: [['Description', 'Qty', 'Unit Price', 'Amount']],
         body: tableRows,
         theme: 'grid',
+        styles: {
+          fontSize: 9,
+          textColor: [0, 0, 0],
+          lineColor: [180, 180, 180],
+          lineWidth: 0.2,
+        },
         headStyles: {
-          fillColor: [10, 36, 78],
-          textColor: [255, 255, 255],
+          fillColor: [245, 245, 245],
+          textColor: [0, 0, 0],
           fontStyle: 'bold',
-          fontSize: 9,
-          cellPadding: 4,
         },
-        bodyStyles: {
-          fontSize: 9,
-          cellPadding: 3.5,
-          textColor: [51, 65, 85],
-        },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: {
-          0: { cellWidth: 60 },
-          1: { cellWidth: 30 },
-          2: { halign: 'center', cellWidth: 16 },
-          3: { halign: 'right' },
-          4: { halign: 'right', fontStyle: 'bold' },
+          1: { halign: 'center', cellWidth: 20 },
+          2: { halign: 'right' },
+          3: { halign: 'right', fontStyle: 'bold' },
         },
       });
 
-      // ═══════════════════════════════════════════════════════════
-      // SUMMARY BOX
-      // ═══════════════════════════════════════════════════════════
-      const afterTable = (doc as any).lastAutoTable.finalY + 8;
-      const boxX = W - margin - 72;
-      const boxW = 72;
-      let bY = afterTable;
+      // ───────────────────────────────
+      // SUMMARY
+      // ───────────────────────────────
+      const afterTable = (doc as any).lastAutoTable.finalY + 10;
 
       const subtotal = Number(bill.totalAmount) + Number(bill.discount);
       const discount = Number(bill.discount);
@@ -464,152 +465,65 @@ export default function BillManager() {
       const cash = Number(bill.paidCash);
       const online = Number(bill.paidOnline);
 
-      // Summary rows
+      const x = W - margin - 70;
+      let bY = afterTable;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
       const rows = [
-        ['Subtotal', `Rs. ${subtotal.toFixed(2)}`],
-        ['Discount', `- Rs. ${discount.toFixed(2)}`],
-        ['Cash Paid', `Rs. ${cash.toFixed(2)}`],
-        ['Online Paid', `Rs. ${online.toFixed(2)}`],
+        ['Subtotal', subtotal],
+        ['Discount', -discount],
+        ['Cash Paid', cash],
+        ['Online Paid', online],
       ];
 
-      doc.setFontSize(8.5);
-      doc.setTextColor(71, 85, 105);
-      doc.setFont('helvetica', 'normal');
-      for (const [label, value] of rows) {
-        doc.text(label, boxX, bY);
-        doc.text(value, boxX + boxW, bY, { align: 'right' });
+      rows.forEach(([label, value]) => {
+        doc.text(label as string, x, bY);
+        doc.text(`Rs. ${Number(value).toFixed(2)}`, x + 70, bY, {
+          align: 'right',
+        });
         bY += 6;
-      }
+      });
 
-      // Total divider
-      doc.setDrawColor(10, 36, 78);
-      doc.setLineWidth(0.6);
-      doc.line(boxX, bY, boxX + boxW, bY);
-      bY += 5;
+      doc.setDrawColor(0, 0, 0);
+      doc.line(x, bY, x + 70, bY);
+      bY += 6;
 
-      // Total row (bold)
-      doc.setFillColor(10, 36, 78);
-      doc.roundedRect(boxX - 2, bY - 5, boxW + 4, 10, 1.5, 1.5, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.setTextColor(255, 255, 255);
-      doc.text('TOTAL', boxX, bY + 2);
-      doc.text(`Rs. ${total.toFixed(2)}`, boxX + boxW, bY + 2, { align: 'right' });
-      bY += 14;
+      doc.text('TOTAL', x, bY);
+      doc.text(`Rs. ${total.toFixed(2)}`, x + 70, bY, {
+        align: 'right',
+      });
 
-      // Payment badge removed.
+      bY += 12;
 
-      // ═══════════════════════════════════════════════════════════
-      // INVOICE META ROW (Moved to Footer side)
-      // ═══════════════════════════════════════════════════════════
+      doc.setFontSize(9);
+      doc.text('Status: PAID', x, bY);
+
+      // ───────────────────────────────
+      // FOOTER + SIGNATURE
+      // ───────────────────────────────
       const pageH = 297;
 
-      doc.setFillColor(241, 245, 249); // slate-100
-      doc.rect(0, pageH - 40, W, 18, 'F');
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, pageH - 40, W - margin, pageH - 40);
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.text('Bill Number', margin, pageH - 33);
-      doc.text('Date', 80, pageH - 33);
-      doc.text('Status', 140, pageH - 33);
+      doc.text('Authorised Signature', W - margin, pageH - 30, {
+        align: 'right',
+      });
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
-      doc.text(formatBillNum(bill.billNumber), margin, pageH - 26);
-      doc.text(
-        new Date(bill.billAt).toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric',
-          timeZone: 'Asia/Kolkata',
-        }),
-        80,
-        pageH - 26,
-      );
-
-      // Status pill
-      doc.setFillColor(34, 197, 94); // green-500
-      doc.roundedRect(140, pageH - 31, 24, 7, 2, 2, 'F');
       doc.setFontSize(8);
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PAID', 152, pageH - 26, { align: 'center' });
+      doc.setTextColor(100, 100, 100);
 
-      // ═══════════════════════════════════════════════════════════
-      // FOOTER
-      // ═══════════════════════════════════════════════════════════
-      doc.setFillColor(10, 36, 78);
-      doc.rect(0, pageH - 22, W, 22, 'F');
+      doc.text('Thank you for choosing Sharda ENT Hospital', W / 2, pageH - 18, {
+        align: 'center',
+      });
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(255, 255, 255);
-      doc.text('Sharda ENT Hospital & Diagnostic Centre', W / 2, pageH - 15, { align: 'center' });
+      doc.text('This is a computer generated invoice.', W / 2, pageH - 12, { align: 'center' });
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(180, 207, 250);
-      doc.text(
-        '17, Chharaval Nayabad, Near Uttarakhand Grahmin Bank, Haldwani - 263139, Uttarakhand',
-        W / 2,
-        pageH - 10,
-        { align: 'center' },
-      );
-
-      doc.setTextColor(150, 190, 240);
-      doc.text(
-        'Thank you for choosing Sharda ENT Hospital. Wishing you speedy recovery!',
-        W / 2,
-        pageH - 5,
-        { align: 'center' },
-      );
-
-      // Save
-      doc.save(`${formatBillNum(bill.billNumber)}_Sharda_ENT.pdf`);
-
-      // Open WhatsApp with patient's number
-      if (bill.phone) {
-        const cleaned = bill.phone.replace(/\D/g, '');
-        const wa = cleaned.length === 10 ? `91${cleaned}` : cleaned;
-
-        const itemsText = bill.items
-          .map((i) => {
-            return `${Number(i.quantity)}x ${i.description} - Rs. ${(Number(i.quantity) * Number(i.unitPrice)).toFixed(2)}`;
-          })
-          .join('\n');
-
-        const sub = (Number(bill.totalAmount) + Number(bill.discount)).toFixed(2);
-        const disc = Number(bill.discount).toFixed(2);
-        const tot = Number(bill.totalAmount).toFixed(2);
-
-        const rawMsg = `🏥 *Sharda ENT Hospital & Diagnostic Centre*
-
-Hello *${bill.patientName}*,
-Here is the summary of your recent visit:
-
-📄 *Bill No:* ${formatBillNum(bill.billNumber)}
-📅 *Date:* ${new Date(bill.billAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
-
-*------- SERVICES & ITEMS -------*
-${itemsText}
-*--------------------------------*
-
-*Subtotal:* Rs. ${sub}
-*Discount:* - Rs. ${disc}
-*Total Amount:* Rs. ${tot}
-
-✅ *Payment Status: PAID*
-
-Thank you for choosing us! Wishing you a speedy recovery ✨
-_(Official PDF invoice attached below)_`.trim();
-
-        const msg = encodeURIComponent(rawMsg);
-        window.open(`https://wa.me/${wa}?text=${msg}`, '_blank');
-      } else {
-        alert('PDF downloaded. No phone number found — please open WhatsApp manually.');
-      }
+      doc.save(`${formatBillNum(bill.billNumber)}_invoice.pdf`);
     } catch (err) {
       console.error(err);
       alert('Could not generate PDF.');
