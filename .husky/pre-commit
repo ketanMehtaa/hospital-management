@@ -3,3 +3,5 @@
 
 # npm test
 npm run format && npm run lint
+
+npx  lint-staged
