@@ -8,6 +8,7 @@ const navItems = [
   { href: '/patients', label: 'Patients' },
   { href: '/medicines', label: 'Medicines' },
   { href: '/bills', label: 'Bills' },
+  { href: '/media', label: 'Media' },
 ];
 
 export default function AppHeader() {
