@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { PrismaClient } from '@/app/generated/prisma/client';
 
+import { mapPatientPayload } from './mapper';
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   throw new Error('DATABASE_URL must be defined in the environment.');
@@ -12,14 +14,29 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl }),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const phone = searchParams.get('phone');
+
+    const whereClause: any = { deletedAt: null };
+    if (phone) {
+      whereClause.phone = phone.replace(/\D/g, '');
+    }
+
     const patients = await prisma.patient.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: 'desc' },
+      where: whereClause,
+      include: {
+        visits: {
+          orderBy: { visitAt: 'desc' },
+          take: 1,
+        },
+      },
     });
 
-    return NextResponse.json(patients);
+    const mapped = patients.map(mapPatientPayload);
+
+    return NextResponse.json(mapped);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to fetch patients.';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -29,18 +46,29 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, age, gender, phone, address, diagnosis, visitAt, visitDate, visitTime } =
-      body as {
-        name?: string;
-        age?: number;
-        gender?: string;
-        phone?: string;
-        address?: string;
-        diagnosis?: string;
-        visitAt?: string;
-        visitDate?: string;
-        visitTime?: string;
-      };
+    const {
+      name,
+      age,
+      gender,
+      phone,
+      address,
+      diagnosis,
+      visitAt,
+      visitDate,
+      visitTime,
+      visitType,
+    } = body as {
+      name?: string;
+      age?: number;
+      gender?: string;
+      phone?: string;
+      address?: string;
+      diagnosis?: string;
+      visitAt?: string;
+      visitDate?: string;
+      visitTime?: string;
+      visitType?: string;
+    };
 
     const normalizedName = name?.trim();
     const normalizedPhone = phone?.replace(/\D/g, '') ?? '';
@@ -114,12 +142,23 @@ export async function POST(request: NextRequest) {
         gender: normalizedGender,
         phone: normalizedPhone,
         address: address?.trim() || undefined,
-        diagnosis: diagnosis?.trim() || undefined,
-        visitAt: parsedVisitAt,
+        visits: {
+          create: {
+            visitAt: parsedVisitAt,
+            diagnosis: diagnosis?.trim() || undefined,
+            type: visitType === 'FollowUp' ? 'FollowUp' : 'Consultation',
+          },
+        },
+      },
+      include: {
+        visits: {
+          orderBy: { visitAt: 'desc' },
+          take: 1,
+        },
       },
     });
 
-    return NextResponse.json(patient, { status: 201 });
+    return NextResponse.json(mapPatientPayload(patient), { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not create patient.';
     return NextResponse.json({ error: message }, { status: 500 });

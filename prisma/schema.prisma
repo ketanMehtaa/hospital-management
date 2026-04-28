@@ -63,10 +63,8 @@ model Patient {
   gender    Gender
   phone     String?  @unique @db.VarChar(15)
   address   String?  @db.Text
-  diagnosis String?  @db.Text
 
-  // ✅ merged date + time
-  visitAt   DateTime
+  visits    Visit[]
 
   bills     Bill[]
   media     PatientMedia[]
@@ -215,4 +213,29 @@ model PatientMedia {
 
   @@index([patientId])
   @@map("patient_media")
+}
+
+/* ================= VISIT ================= */
+
+enum VisitType {
+  Consultation
+  FollowUp
+}
+
+model Visit {
+  id        String   @id @default(uuid()) @db.Uuid
+  patientId String   @map("patient_id") @db.Uuid
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  visitAt   DateTime @map("visit_at")
+  diagnosis String?  @db.Text
+  notes     String?  @db.Text
+  type      VisitType @default(Consultation)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([visitAt])
+  @@map("visits")
 }

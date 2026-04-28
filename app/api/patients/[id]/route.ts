@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { PrismaClient } from '@/app/generated/prisma/client';
 
+import { mapPatientPayload } from '../mapper';
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   throw new Error('DATABASE_URL must be defined in the environment.');
@@ -18,13 +20,19 @@ export async function GET(_req: NextRequest, ctx: RouteContext<'/api/patients/[i
   try {
     const patient = await prisma.patient.findFirst({
       where: { id, deletedAt: null },
+      include: {
+        visits: {
+          orderBy: { visitAt: 'desc' },
+          take: 1,
+        },
+      },
     });
 
     if (!patient) {
       return NextResponse.json({ error: 'Patient not found.' }, { status: 404 });
     }
 
-    return NextResponse.json(patient);
+    return NextResponse.json(mapPatientPayload(patient));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to fetch patient.';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -37,7 +45,11 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
   try {
     const existing = await prisma.patient.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true, phone: true },
+      select: {
+        id: true,
+        phone: true,
+        visits: { orderBy: { visitAt: 'desc' }, take: 1, select: { id: true } },
+      },
     });
 
     if (!existing) {
@@ -45,20 +57,32 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
     }
 
     const body = await request.json();
-    const { name, age, gender, phone, address, diagnosis, visitAt, visitDate, visitTime } =
-      body as {
-        name?: string;
-        age?: number;
-        gender?: string;
-        phone?: string;
-        address?: string;
-        diagnosis?: string;
-        visitAt?: string;
-        visitDate?: string;
-        visitTime?: string;
-      };
+    const {
+      name,
+      age,
+      gender,
+      phone,
+      address,
+      diagnosis,
+      visitAt,
+      visitDate,
+      visitTime,
+      visitType,
+      action,
+    } = body as {
+      name?: string;
+      age?: number;
+      gender?: string;
+      phone?: string;
+      address?: string;
+      diagnosis?: string;
+      visitAt?: string;
+      visitDate?: string;
+      visitTime?: string;
+      visitType?: string;
+      action?: 'edit' | 'follow-up';
+    };
 
-    // ── Validate required fields ──────────────────────────────────────────────
     const normalizedName = name?.trim();
     if (!normalizedName) {
       return NextResponse.json({ error: 'Name is required.' }, { status: 400 });
@@ -91,7 +115,6 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
       );
     }
 
-    // ── Phone ─────────────────────────────────────────────────────────────────
     const normalizedPhone = phone?.replace(/\D/g, '') ?? '';
     if (!normalizedPhone || normalizedPhone.length !== 10) {
       return NextResponse.json(
@@ -100,7 +123,6 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
       );
     }
 
-    // If phone changed, check uniqueness
     if (normalizedPhone !== existing.phone) {
       const conflict = await prisma.patient.findFirst({
         where: { phone: normalizedPhone },
@@ -114,7 +136,6 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
       }
     }
 
-    // ── Visit datetime ────────────────────────────────────────────────────────
     const fallbackVisitTime = visitTime?.trim() || new Date().toTimeString().slice(0, 5);
     const visitDateTimeInput =
       visitAt?.trim() || (visitDate ? `${visitDate}T${fallbackVisitTime}:00` : '');
@@ -123,7 +144,27 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
       return NextResponse.json({ error: 'Visit date and time must be valid.' }, { status: 400 });
     }
 
-    const updated = await prisma.patient.update({
+    const visitPayload: any =
+      action === 'follow-up' || existing.visits.length === 0
+        ? {
+            create: {
+              visitAt: parsedVisitAt,
+              diagnosis: diagnosis?.trim() || undefined,
+              type: visitType === 'Consultation' ? 'Consultation' : 'FollowUp',
+            },
+          }
+        : {
+            update: {
+              where: { id: existing.visits[0].id },
+              data: {
+                visitAt: parsedVisitAt,
+                diagnosis: diagnosis?.trim() || null,
+                type: visitType === 'FollowUp' ? 'FollowUp' : 'Consultation',
+              },
+            },
+          };
+
+    const finalPatient = await prisma.patient.update({
       where: { id },
       data: {
         name: normalizedName,
@@ -131,12 +172,17 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<'/api/patien
         gender: normalizedGender,
         phone: normalizedPhone,
         address: address?.trim() || null,
-        diagnosis: diagnosis?.trim() || null,
-        visitAt: parsedVisitAt,
+        visits: visitPayload,
+      },
+      include: {
+        visits: {
+          orderBy: { visitAt: 'desc' },
+          take: 1,
+        },
       },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json(mapPatientPayload(finalPatient));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not update patient.';
     return NextResponse.json({ error: message }, { status: 500 });

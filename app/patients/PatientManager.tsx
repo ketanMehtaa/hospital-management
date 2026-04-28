@@ -12,6 +12,8 @@ type PatientPayload = {
   diagnosis: string | null;
   visitAt: string;
   createdAt: string;
+  visitType?: 'Consultation' | 'FollowUp';
+  visitId?: string;
 };
 
 type FormState = {
@@ -23,6 +25,7 @@ type FormState = {
   diagnosis: string;
   visitDate: string;
   visitTime: string;
+  visitType: 'Consultation' | 'FollowUp';
 };
 
 const getTodayDateInput = () => {
@@ -47,6 +50,7 @@ const createInitialFormState = (): FormState => ({
   diagnosis: '',
   visitDate: getTodayDateInput(),
   visitTime: getCurrentTimeInput(),
+  visitType: 'Consultation',
 });
 
 const visitAtToFormFields = (visitAt: string): { visitDate: string; visitTime: string } => {
@@ -69,6 +73,7 @@ const patientToFormState = (p: PatientPayload): FormState => ({
   address: p.address ?? '',
   diagnosis: p.diagnosis ?? '',
   ...visitAtToFormFields(p.visitAt),
+  visitType: p.visitType ?? 'Consultation',
 });
 
 // ─── Input / Select class ─────────────────────────────────────────────────────
@@ -81,6 +86,7 @@ export default function PatientManager() {
   const [patients, setPatients] = useState<PatientPayload[]>([]);
   const [form, setForm] = useState<FormState>(() => createInitialFormState());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [mode, setMode] = useState<'create' | 'edit' | 'follow-up'>('create');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -91,7 +97,7 @@ export default function PatientManager() {
     setError(null);
 
     try {
-      const response = await fetch('/api/patients', { cache: 'no-store' });
+      const response = await fetch('/api/visits', { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to load patients.');
       const data = (await response.json()) as PatientPayload[];
       setPatients(data);
@@ -111,8 +117,47 @@ export default function PatientManager() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const handlePhoneChange = (value: string) => {
-    handleChange('phone', value.replace(/\D/g, '').slice(0, 10));
+  const handlePhoneChange = async (value: string) => {
+    const newPhone = value.replace(/\D/g, '').slice(0, 10);
+    handleChange('phone', newPhone);
+
+    if (mode === 'follow-up' && newPhone.length < 10) {
+      setEditingId(null);
+      setMode('create');
+      setForm(() => ({
+        ...createInitialFormState(),
+        phone: newPhone,
+      }));
+      setSuccess(null);
+    }
+
+    if (newPhone.length === 10 && mode === 'create') {
+      try {
+        const res = await fetch(`/api/patients?phone=${newPhone}`);
+        if (res.ok) {
+          const patientsList = (await res.json()) as PatientPayload[];
+          if (patientsList.length > 0) {
+            const patient = patientsList[0];
+            setEditingId(patient.id);
+            setMode('follow-up');
+            setForm((cur) => ({
+              ...cur,
+              name: patient.name,
+              age: patient.age !== null ? String(patient.age) : '',
+              gender: patient.gender ?? '',
+              address: patient.address ?? '',
+              diagnosis: '',
+              visitDate: getTodayDateInput(),
+              visitTime: getCurrentTimeInput(),
+              visitType: 'FollowUp',
+            }));
+            setSuccess('Patient found. Ready to create a follow-up visit.');
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
   };
 
   const handleAgeChange = (value: string) => {
@@ -133,15 +178,31 @@ export default function PatientManager() {
   // Populate the form from a clicked patient row
   const startEdit = (patient: PatientPayload) => {
     setEditingId(patient.id);
+    setMode('edit');
     setForm(patientToFormState(patient));
     setError(null);
     setSuccess(null);
-    // Scroll form into view smoothly
+    document.getElementById('patient-form-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const startFollowUp = (patient: PatientPayload) => {
+    setEditingId(patient.id);
+    setMode('follow-up');
+    setForm((cur) => ({
+      ...patientToFormState(patient),
+      diagnosis: '',
+      visitDate: getTodayDateInput(),
+      visitTime: getCurrentTimeInput(),
+      visitType: 'FollowUp',
+    }));
+    setError(null);
+    setSuccess(null);
     document.getElementById('patient-form-section')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
+    setMode('create');
     setForm(createInitialFormState());
     setError(null);
     setSuccess(null);
@@ -165,9 +226,14 @@ export default function PatientManager() {
         visitAt: buildVisitAt(),
       };
 
-      const isEdit = editingId !== null;
-      const url = isEdit ? `/api/patients/${editingId}` : '/api/patients';
-      const method = isEdit ? 'PATCH' : 'POST';
+      let url = '/api/patients';
+      let method = 'POST';
+
+      if (mode !== 'create' && editingId) {
+        url = `/api/patients/${editingId}`;
+        method = 'PATCH';
+        (payload as any).action = mode;
+      }
 
       const response = await fetch(url, {
         method,
@@ -183,7 +249,8 @@ export default function PatientManager() {
       if (!response.ok) {
         const message = result && 'error' in result ? result.error : undefined;
         throw new Error(
-          message || `Could not ${isEdit ? 'update' : 'create'} patient. (HTTP ${response.status})`,
+          message ||
+            `Could not ${mode === 'edit' ? 'update' : 'create'} patient/visit. (HTTP ${response.status})`,
         );
       }
 
@@ -196,12 +263,13 @@ export default function PatientManager() {
         throw new Error('Server returned an invalid response.');
       }
 
-      if (isEdit) {
-        setPatients((current) => current.map((p) => (p.id === savedPatient.id ? savedPatient : p)));
-        setSuccess('Patient updated successfully.');
+      await fetchPatients();
+
+      if (mode === 'edit' || mode === 'follow-up') {
+        setSuccess(mode === 'edit' ? 'Patient updated successfully.' : 'Follow-up visit created.');
         setEditingId(null);
+        setMode('create');
       } else {
-        setPatients((current) => [savedPatient, ...current]);
         setSuccess('Patient saved successfully.');
       }
 
@@ -226,28 +294,39 @@ export default function PatientManager() {
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500">
-              {isEditing ? 'Editing' : 'Patients'}
+              {mode === 'edit'
+                ? 'Editing'
+                : mode === 'follow-up'
+                  ? form.visitType === 'Consultation'
+                    ? 'Consultation'
+                    : 'Follow Up'
+                  : 'Patients'}
             </p>
             <h2 className="mt-2 text-2xl font-semibold text-zinc-950">
-              {isEditing ? 'Edit patient record' : 'Patient registry'}
+              {mode === 'edit'
+                ? 'Edit patient record'
+                : mode === 'follow-up'
+                  ? form.visitType === 'Consultation'
+                    ? 'New consultation visit'
+                    : 'New follow-up visit'
+                  : 'Patient registry'}
             </h2>
           </div>
 
           <div className="flex items-center gap-3">
-            {isEditing && (
+            {(mode === 'edit' || mode === 'follow-up') && (
               <button
                 type="button"
                 onClick={cancelEdit}
                 className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
               >
-                Cancel edit
+                Cancel {mode}
               </button>
             )}
           </div>
         </div>
 
-        {/* Edit banner */}
-        {isEditing && (
+        {mode !== 'create' && (
           <div className="mb-4 flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -257,11 +336,16 @@ export default function PatientManager() {
             >
               <path d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" />
             </svg>
-            Editing&nbsp;
+            {mode === 'edit'
+              ? 'Editing '
+              : form.visitType === 'Consultation'
+                ? 'Adding consultation for '
+                : 'Follow-up for '}
             <span className="font-semibold">
               {patients.find((p) => p.id === editingId)?.name ?? 'patient'}
             </span>
-            &mdash; changes will be saved on submit.
+            &mdash;{' '}
+            {mode === 'edit' ? 'changes will be saved on submit.' : 'a new visit will be created.'}
           </div>
         )}
 
@@ -348,7 +432,21 @@ export default function PatientManager() {
             />
           </label>
 
-          <label className="space-y-2 text-sm text-zinc-700 md:col-span-2">
+          <label className="space-y-2 text-sm text-zinc-700">
+            Visit type*
+            <select
+              id="patient-visit-type"
+              className={inputCls}
+              value={form.visitType}
+              onChange={(e) => handleChange('visitType', e.target.value)}
+              required
+            >
+              <option value="Consultation">New Consultation</option>
+              <option value="FollowUp">Follow-up</option>
+            </select>
+          </label>
+
+          <label className="space-y-2 text-sm text-zinc-700">
             Address
             <textarea
               id="patient-address"
@@ -371,25 +469,37 @@ export default function PatientManager() {
 
           <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-zinc-600">
-              {isEditing
+              {mode === 'edit'
                 ? 'Edit the fields above and submit to save changes.'
-                : 'Add new patients and keep your visit records in one place.'}
+                : mode === 'follow-up'
+                  ? `Review the details and submit to create a new ${form.visitType === 'Consultation' ? 'consultation' : 'follow-up'} visit.`
+                  : 'Add new patients and keep your visit records in one place.'}
             </div>
             <button
               id="patient-submit-btn"
               type="submit"
               className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                isEditing ? 'bg-amber-600 hover:bg-amber-500' : 'bg-zinc-950 hover:bg-zinc-800'
+                mode !== 'create'
+                  ? 'bg-amber-600 hover:bg-amber-500'
+                  : 'bg-zinc-950 hover:bg-zinc-800'
               }`}
               disabled={loading}
             >
               {loading
-                ? isEditing
+                ? mode === 'edit'
                   ? 'Updating...'
-                  : 'Saving...'
-                : isEditing
+                  : mode === 'follow-up'
+                    ? form.visitType === 'Consultation'
+                      ? 'Saving Consultation...'
+                      : 'Saving Follow-up...'
+                    : 'Saving...'
+                : mode === 'edit'
                   ? 'Update patient'
-                  : 'Save patient'}
+                  : mode === 'follow-up'
+                    ? form.visitType === 'Consultation'
+                      ? 'Save Consultation'
+                      : 'Save Follow-up'
+                    : 'Save patient'}
             </button>
           </div>
         </form>
@@ -407,7 +517,7 @@ export default function PatientManager() {
       {/* ── Patient list ─────────────────────────────────────────────────── */}
       <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm shadow-zinc-200/20">
         <h3 className="mb-4 text-lg font-semibold text-zinc-950">
-          Recent patients <span className="text-sm font-normal text-zinc-400">(last 10)</span>
+          Recent visits <span className="text-sm font-normal text-zinc-400">(last 10)</span>
         </h3>
 
         {loading && patients.length === 0 ? (
@@ -433,7 +543,7 @@ export default function PatientManager() {
               <tbody className="divide-y divide-zinc-200">
                 {patients.slice(0, 10).map((patient) => (
                   <tr
-                    key={patient.id}
+                    key={patient.visitId || patient.id}
                     className={`transition ${editingId === patient.id ? 'bg-amber-50' : 'hover:bg-zinc-50'}`}
                   >
                     <td className="px-4 py-3 font-semibold text-zinc-950">{patient.name}</td>
@@ -450,11 +560,22 @@ export default function PatientManager() {
                           timeZone: 'Asia/Kolkata',
                         })}
                       </div>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                            patient.visitType === 'FollowUp'
+                              ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                              : 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                          }`}
+                        >
+                          {patient.visitType === 'FollowUp' ? 'Follow-up' : 'Consultation'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">{patient.phone || '--'}</td>
                     <td className="px-4 py-3">{patient.diagnosis || '--'}</td>
                     <td className="px-4 py-3 text-right">
-                      {editingId === patient.id ? (
+                      {(mode === 'edit' || mode === 'follow-up') && editingId === patient.id ? (
                         <button
                           type="button"
                           onClick={cancelEdit}
@@ -463,22 +584,31 @@ export default function PatientManager() {
                           Cancel
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          id={`edit-patient-${patient.id}`}
-                          onClick={() => startEdit(patient)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 16 16"
-                            fill="currentColor"
-                            className="size-3"
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startFollowUp(patient)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"
                           >
-                            <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.714 1.272l-.547 2.19a.75.75 0 0 0 .906.906l2.19-.547a2.75 2.75 0 0 0 1.272-.714l4.262-4.263a1.75 1.75 0 0 0 0-2.475ZM2.75 3.5c-.69 0-1.25.56-1.25 1.25v8.5c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 0 11 9v4.25H2.75V4.75H7A.75.75 0 0 0 7 3.5H2.75Z" />
-                          </svg>
-                          Edit
-                        </button>
+                            Follow Up
+                          </button>
+                          <button
+                            type="button"
+                            id={`edit-patient-${patient.id}`}
+                            onClick={() => startEdit(patient)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 16 16"
+                              fill="currentColor"
+                              className="size-3"
+                            >
+                              <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.714 1.272l-.547 2.19a.75.75 0 0 0 .906.906l2.19-.547a2.75 2.75 0 0 0 1.272-.714l4.262-4.263a1.75 1.75 0 0 0 0-2.475ZM2.75 3.5c-.69 0-1.25.56-1.25 1.25v8.5c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 0 11 9v4.25H2.75V4.75H7A.75.75 0 0 0 7 3.5H2.75Z" />
+                            </svg>
+                            Edit
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
