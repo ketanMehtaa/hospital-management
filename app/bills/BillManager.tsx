@@ -302,7 +302,7 @@ export default function BillManager() {
 
   // ── Share PDF ───────────────────────────────────────────────────────────────
 
-  const handleWhatsAppShare = async (bill: BillPayload) => {
+  const handleDownloadPDF = async (bill: BillPayload) => {
     try {
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
       const W = 210;
@@ -315,11 +315,12 @@ export default function BillManager() {
         age: '',
         diagnosis: '',
         visitAt: '',
+        visitType: '',
       };
 
       if (bill.patientId) {
         try {
-          const res = await fetch(`/api/patients/${bill.patientId}`);
+          const res = await fetch(`/api/patients/${bill.patientId}`, { cache: 'no-store' });
           if (res.ok) {
             const p = await res.json();
             patientDetails.age = p.age ? `${p.age} Yrs` : '';
@@ -329,6 +330,7 @@ export default function BillManager() {
                   timeZone: 'Asia/Kolkata',
                 })
               : '';
+            patientDetails.visitType = p.visitType === 'FollowUp' ? 'Follow-up' : 'Consultation';
           }
         } catch {}
       }
@@ -396,6 +398,14 @@ export default function BillManager() {
         110,
         y,
       );
+
+      y += 6;
+
+      // Visit Type
+      doc.setFont('helvetica', 'bold');
+      doc.text('Visit Type:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(patientDetails.visitType || 'Consultation', margin + 25, y);
 
       y += 6;
 
@@ -528,6 +538,85 @@ export default function BillManager() {
       console.error(err);
       alert('Could not generate PDF.');
     }
+  };
+
+  const handleWhatsAppShare = async (bill: BillPayload) => {
+    if (!bill.phone) {
+      alert('No phone number available for this bill.');
+      return;
+    }
+    const phone = bill.phone.replace(/\D/g, '');
+    if (phone.length !== 10) {
+      alert('Invalid phone number format.');
+      return;
+    }
+
+    const patientDetails = {
+      age: '',
+      diagnosis: '',
+      visitAt: '',
+      visitType: '',
+    };
+
+    if (bill.patientId) {
+      try {
+        const res = await fetch(`/api/patients/${bill.patientId}`, { cache: 'no-store' });
+        if (res.ok) {
+          const p = await res.json();
+          patientDetails.age = p.age ? `${p.age} Yrs` : '';
+          patientDetails.diagnosis = p.diagnosis || 'N/A';
+          patientDetails.visitAt = p.visitAt
+            ? new Date(p.visitAt).toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+              })
+            : new Date(bill.billAt).toLocaleString('en-IN');
+          patientDetails.visitType = p.visitType === 'FollowUp' ? 'Follow-up' : 'Consultation';
+        }
+      } catch {}
+    }
+
+    let text = `*Sharda ENT Hospital & Diagnostic Centre*\n`;
+    text += `ENT Specialist | Diagnostic Centre\n\n`;
+    text += `*INVOICE*\n`;
+    text += `Bill No: ${formatBillNum(bill.billNumber)}\n`;
+    text += `Date: ${new Date(bill.billAt).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })}\n\n`;
+
+    text += `*Patient Details*\n`;
+    text += `Name: ${bill.patientName}\n`;
+    text += `Phone: ${bill.phone}\n`;
+    if (patientDetails.age) text += `Age: ${patientDetails.age}\n`;
+    if (patientDetails.visitAt) text += `Visit Time: ${patientDetails.visitAt}\n`;
+    if (patientDetails.visitType) text += `Visit Type: ${patientDetails.visitType}\n`;
+    if (patientDetails.diagnosis) text += `Diagnosis: ${patientDetails.diagnosis}\n\n`;
+
+    text += `*Items*\n`;
+    bill.items.forEach((item) => {
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.unitPrice) || 0;
+      text += `- ${item.description} (x${qty}): Rs. ${(qty * price).toFixed(2)}\n`;
+    });
+
+    const subtotal = Number(bill.totalAmount) + Number(bill.discount);
+    text += `\n*Summary*\n`;
+    text += `Subtotal: Rs. ${subtotal.toFixed(2)}\n`;
+    if (Number(bill.discount) > 0) {
+      text += `Discount: -Rs. ${Number(bill.discount).toFixed(2)}\n`;
+    }
+    text += `*Total: Rs. ${Number(bill.totalAmount).toFixed(2)}*\n\n`;
+
+    if (Number(bill.paidCash) > 0) text += `Paid Cash: Rs. ${Number(bill.paidCash).toFixed(2)}\n`;
+    if (Number(bill.paidOnline) > 0)
+      text += `Paid Online: Rs. ${Number(bill.paidOnline).toFixed(2)}\n`;
+
+    text += `\nStatus: *PAID*\n\n`;
+    text += `Thank you for choosing Sharda ENT Hospital!\n`;
+
+    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   // ── Edit helpers ────────────────────────────────────────────────────────────
@@ -1210,6 +1299,25 @@ export default function BillManager() {
                               <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
                             </svg>
                             WhatsApp
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadPDF(bill)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              className="size-3.5"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 2.5a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3.25A.75.75 0 0 1 10 2.5ZM2.75 16.5a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75Z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Download PDF
                           </button>
                           {editingId === bill.id ? (
                             <button
